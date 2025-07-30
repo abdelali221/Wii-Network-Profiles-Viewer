@@ -2,6 +2,8 @@
 #include "Video.h"
 #include "WiiLibs.h"
 
+#define VER "1.0"
+
 #define PROFSIZE 0x91C
 #define HEADERSIZE 0x8
 #define SSIDOFFSET 0x7C4
@@ -11,7 +13,7 @@
 
 static fstats filest aligned; 
 
-int PROFNumber = 2;
+int PROFNumber = 1;
 
 void Value2Binary(u8 byte, bool *buffer) {
     for (int i = 7; i >= 0; i--) {
@@ -109,16 +111,34 @@ void printprofiledetails(int PROFNumber, const u8 *buff) {
 int main() {
     VideoInit();
     WPAD_Init();
+
+    printf("Wii Connection Profiles Viewer %s\n By Abdelali221\n    This software is provided AS IT IS, so use it AT YOUR OWN RISK!\n Press anything but A if you want to exit...", VER);
+
+    while (1) {
+        int Input = CheckWPAD(0);
+        if (Input == b_A) {
+            break;
+        } else if (Input != 0) {
+            exit(0);
+        }
+    }
+
     ISFS_Initialize();
+
+    ClearScreen();
 
     s32 fcfg = ISFS_Open("/shared2/sys/net/02/config.dat", ISFS_OPEN_READ);
 
     int stat = ISFS_GetFileStats(fcfg, &filest);
     if (fcfg >= 0 && stat == ISFS_OK) {
-        printf("config.dat size : %d\n", filest.file_length);
+        printf("/shared2/sys/net/02/config.dat size : %d\n", filest.file_length);
     } else {
         printf("%d", stat);
     }
+
+    usleep(2000000);
+
+    ClearScreen();
 
     u8 aligned buff[filest.file_length + 1];
 
