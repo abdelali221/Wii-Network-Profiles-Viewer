@@ -2,13 +2,16 @@
 #include "Video.h"
 #include "WiiLibs.h"
 
-#define VER "1.0"
+#define VER "1.1"
 
 #define PROFSIZE 0x91C
 #define HEADERSIZE 0x8
 #define SSIDOFFSET 0x7C4
 #define PASSKEYOFFSET 0x7F0
 #define ENCRYPTIONTYPEOFFSET 0x7E9
+#define MANUALIPOFFSET 0x4
+#define MANUALDNSOFFSET 0x10
+
 #define aligned __attribute__((aligned(32)))
 
 static fstats filest aligned; 
@@ -82,14 +85,24 @@ void printprofiledetails(int PROFNumber, const u8 *buff) {
         printf("Use Proxy? %s\n", binary[3] ? "Yes" : "No");
         printf("PPPoE? %s\n", binary[4] ? "Yes" : "No");
         printf("DNS Source? %s\n", binary[5] ? "Auto" : "Manual");
+        if (!binary[5]) {
+            printf("  + Primary DNS : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
+            printf("  + Secondary DNS : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 6], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
+        }
         printf("IP source? %s\n", binary[6] ? "DHCP" : "Manual");
+        if (!binary[6]) {
+            printf("  + IP Address : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
+            printf("  + Subnet Mask : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 6], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
+            printf("  + Router IP : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 8], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 9], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 10], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 11]);
+
+        }
         printf("Interface? %s\n", binary[7] ? "Wired" : "Wireless");
 
         if (!binary[7]) {
 
             printf("\nSSID : ");
 
-            for (size_t i = 0; i < 32; i++)
+            for (size_t i = 0; buff[HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
             {
                 putchar(buff[HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE) + i]);
             }
@@ -97,7 +110,7 @@ void printprofiledetails(int PROFNumber, const u8 *buff) {
 
             printf("\nPASSKEY : ");
 
-            for (size_t i = 0; i < 64; i++)
+            for (size_t i = 0; buff[HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
             {
                 putchar(buff[HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE) + i]);
             }
@@ -154,14 +167,15 @@ int main() {
 
     ISFS_Close(fcfg);
 
-    while(1) {
+    ISFS_Deinitialize();
+
+    bool inloop = true;
+
+    while(inloop) {
         int Input = CheckWPAD(0);
 
         if (Input == HOME) {
-            ISFS_Deinitialize();
-            ClearScreen();
-            printf("Exiting...");
-            exit(0);
+            inloop = false;
         }
             
         if (Input == LEFT) {
@@ -181,5 +195,8 @@ int main() {
         }
         VIDEO_WaitVSync();
     }
+                
+    ClearScreen();
+    printf("Exiting...");
     return 0;
 }

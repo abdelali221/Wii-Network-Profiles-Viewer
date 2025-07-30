@@ -49,7 +49,7 @@ int CheckWPAD(int pad) {
     
     } else if (pressed & WPAD_BUTTON_HOME) {
     
-        exit(0);
+        return HOME;
     
     }
     return 0;
