@@ -4,13 +4,30 @@
 
 #define VER "1.1"
 
+// Header and Profiles :
+
 #define PROFSIZE 0x91C
 #define HEADERSIZE 0x8
+
+// IP and DNS :
+
+#define MANUALIPOFFSET 0x4
+#define MANUALDNSOFFSET 0x10
+
+// Wireless :
+
 #define SSIDOFFSET 0x7C4
 #define PASSKEYOFFSET 0x7F0
 #define ENCRYPTIONTYPEOFFSET 0x7E9
-#define MANUALIPOFFSET 0x4
-#define MANUALDNSOFFSET 0x10
+
+// Proxy :
+
+#define PROXYFLAGSOFFSET 0x24
+#define PROXYSERVERNAMEOFFSET 0x28
+#define PROXYPORTOFFSET 0x128
+#define PROXYUSRNAMEOFFSET 0x12A
+#define PROXYPASSWORDOFFSET 0x14B
+
 
 #define aligned __attribute__((aligned(32)))
 
@@ -83,6 +100,24 @@ void printprofiledetails(int PROFNumber, const u8 *buff) {
         printf("Use PMTU Recovery? %s\n", binary[1] ? "Yes" : "No");
         printf("Internet test passed? %s\n", binary[2] ? "Yes" : "No");
         printf("Use Proxy? %s\n", binary[3] ? "Yes" : "No");
+        if (binary[3]) {
+            printf("  + Proxy Server : ");
+            for (size_t i = (HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
+                putchar(buff[i]);
+            }
+            printf("\n  + Port : %d", (buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]);
+            if (buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1]) {
+                printf("\n  + Username : ");
+                for (size_t i = (HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
+                    putchar(buff[i]);
+                }
+                printf("\n  + Password : ");
+                for (size_t i = (HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
+                    putchar(buff[i]);
+                }
+                putchar('\n');                
+            }
+        }
         printf("PPPoE? %s\n", binary[4] ? "Yes" : "No");
         printf("DNS Source? %s\n", binary[5] ? "Auto" : "Manual");
         if (!binary[5]) {
