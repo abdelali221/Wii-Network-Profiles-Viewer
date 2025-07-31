@@ -2,10 +2,10 @@
 <app version="1">
 	<name>WNPV</name>
 	<version>1.1</version>
-	<release_date>20250730000000</release_date>
+	<release_date>20250731000000</release_date>
 	<coder>Abdelali221</coder>
 	<short_description>Network Config Viewer!</short_description>
-	<long_description>Network Config Viewer!
+	<long_description>Wii Network Config Viewer!
 
 This app let you check the properties of every profile (Such as the SSID, the Passkey, etc...).
 </long_description>
