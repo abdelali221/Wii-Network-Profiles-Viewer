@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "Video.h"
 #include "WiiLibs.h"
+#include <ogc/machine/processor.h>
 
 #define VER "1.1"
 
@@ -31,9 +32,7 @@
 
 #define aligned __attribute__((aligned(32)))
 
-static fstats filest aligned; 
-
-int PROFNumber = 1;
+static fstats filest aligned;
 
 void Value2Binary(u8 byte, bool *buffer) {
     for (int i = 7; i >= 0; i--) {
@@ -156,7 +155,28 @@ void printprofiledetails(int PROFNumber, const u8 *buff) {
     }
 }
 
+u16 get_tmd_version(u64 title) {
+    STACK_ALIGN(u8, tmdbuf, 1024, 32);
+    u32 tmd_view_size = 0;
+    s32 res;
+
+    res = ES_GetTMDViewSize(title, &tmd_view_size);
+
+    if (res < 0) return 0;
+
+    if (tmd_view_size > 1024) return 0;
+
+    ES_GetTMDView(title, (tmd_view*)tmdbuf, tmd_view_size);
+
+    if (res < 0) return 0;
+
+    return (tmdbuf[88] << 8) | tmdbuf[89];
+}
+
 int main() {
+    
+    int PROFNumber = 1;
+
     VideoInit();
     WPAD_Init();
 
@@ -175,11 +195,22 @@ int main() {
 
     ClearScreen();
 
-    s32 fcfg = ISFS_Open("/shared2/sys/net/02/config.dat", ISFS_OPEN_READ);
+    char cfgpath[64] = {0};
+
+    u16 SMVER = get_tmd_version(0x0000000100000002);
+
+    if (SMVER == 34 || SMVER == 33 || SMVER == 64) {
+        sprintf(cfgpath, "/shared2/sys/net/config.dat");
+    } else {
+        sprintf(cfgpath, "/shared2/sys/net/02/config.dat");
+    }
+    
+
+    s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
 
     int stat = ISFS_GetFileStats(fcfg, &filest);
     if (fcfg >= 0 && stat == ISFS_OK) {
-        printf("/shared2/sys/net/02/config.dat size : %d\n", filest.file_length);
+        printf("%s size : %d\n", cfgpath, filest.file_length);
     } else {
         printf("%d", stat);
     }
