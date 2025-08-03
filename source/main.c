@@ -3,7 +3,7 @@
 #include "WiiLibs.h"
 #include <ogc/machine/processor.h>
 
-#define VER "1.1"
+#define VER "1.2"
 
 // Header and Profiles :
 
@@ -29,6 +29,9 @@
 #define PROXYUSRNAMEOFFSET 0x12A
 #define PROXYPASSWORDOFFSET 0x14B
 
+#define SM1PATH "/shared2/sys/net/config.dat"
+
+#define POSTSM1PATH "/shared2/sys/net/02/config.dat"
 
 #define aligned __attribute__((aligned(32)))
 
@@ -180,7 +183,7 @@ int main() {
     VideoInit();
     WPAD_Init();
 
-    printf("Wii Connection Profiles Viewer %s\n By Abdelali221\n    This software is provided AS IT IS, so use it AT YOUR OWN RISK!\n Press anything but A if you want to exit...", VER);
+    printf("Wii Network Profiles Viewer %s\n By Abdelali221\n    This software is provided AS IT IS, so use it AT YOUR OWN RISK!\n Press anything but A if you want to exit...", VER);
 
     while (1) {
         int Input = CheckWPAD(0);
@@ -200,21 +203,42 @@ int main() {
     u16 SMVER = get_tmd_version(0x0000000100000002);
 
     if (SMVER == 34 || SMVER == 33 || SMVER == 64) {
-        sprintf(cfgpath, "/shared2/sys/net/config.dat");
+        
     } else {
-        sprintf(cfgpath, "/shared2/sys/net/02/config.dat");
+        sprintf(cfgpath, POSTSM1PATH);
     }
-    
 
+    printf("%s ", cfgpath);
+    
     s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
 
     int stat = ISFS_GetFileStats(fcfg, &filest);
     if (fcfg >= 0 && stat == ISFS_OK) {
-        printf("%s size : %d\n", cfgpath, filest.file_length);
+        printf("size : %d\n", filest.file_length);
     } else {
-        printf("%d", stat);
+        if (stat == -4) {
+            printf("NOT FOUND!\n");
+            if (!strcmp(cfgpath, SM1PATH)) {
+                sprintf(cfgpath, POSTSM1PATH);
+                fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
+            }
+            if (!strcmp(cfgpath, POSTSM1PATH) == 0) {
+                sprintf(cfgpath, SM1PATH);
+                fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
+            }
+            printf("%s ", cfgpath);
+        }
+        stat = ISFS_GetFileStats(fcfg, &filest);
+        if (fcfg >= 0 && stat == ISFS_OK) {
+            printf("size : %d\n", filest.file_length);
+        } else {
+            printf(" NOT FOUND!\nAborting...");
+            exit(0);
+        }
     }
 
+    
+   
     usleep(2000000);
 
     ClearScreen();
