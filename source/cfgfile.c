@@ -130,9 +130,8 @@ void printprofiledetails(int PROFNumber, uint8_t *buff) {
 
             printf("\nSSID : ");
 
-            for (size_t i = 0; i < buff[HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE)]; i++)
-            {
-                putchar(buff[0x7D4 + i]);
+            for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
+                putchar(buff[i]);
             }
 
             printf("\nPASSKEY : ");
@@ -160,7 +159,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
     while (1) {
         ClearScreen();
 
-        POSCursor(30, 5);
+        POSCursor(30, 4);
         printf("Proxy Settings :");
 
         POSCursor(20, 6);
@@ -488,26 +487,30 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
 
         POSCursor(20, 8);
         if(dns_ip) {
-            printf("IP Address : ");
-        } else {
-            printf("Primary DNS : ");
-            for (size_t i = (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)); i < (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 7; i++) {
-                printf("%d.", buff[i]);
-            }
-        }
-        
-
-        POSCursor(20, 10);
-        if(dns_ip) {
             printf("IP Address : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
         } else {
-            printf("Secondary DNS : ");
-            for (size_t i = (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 8; i < (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 15; i++) {
+            printf("Primary DNS : ");
+            for (size_t i = (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)); i < (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 4; i++) {
                 printf("%d.", buff[i]);
             }
+            printf("\b \b");
         }
         
-        POSCursor(20, 12);
+        POSCursor(20, 10);
+        if(dns_ip) {
+            printf("Subnet Mask : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
+        } else {
+            printf("Secondary DNS : ");
+            for (size_t i = (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 4; i < (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 8; i++) {
+                printf("%d.", buff[i]);
+            }
+            printf("\b \b");
+        }
+
+        if (dns_ip) {
+            POSCursor(20, 12);
+            printf("Router IP : %d.%d.%d.%d", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 8], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 9], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 10], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 11]);
+        }
 
         POSCursor(18, 8 + (Selection * 2));
         printf("->");
@@ -517,7 +520,6 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
         
         while (brk) {
             int Input = CheckWPAD(0);
-            int idx = 0;
             switch (Input) {
 
                 case HOME:
@@ -537,7 +539,7 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                 case UP:
                     if (Selection > 0) {
                         POSCursor(18, 8 + (Selection * 2));
-                        printf("  ");
+                         printf("  ");
                         Selection--;
                         POSCursor(18, 8 + (Selection * 2));
                         printf("->");
@@ -546,173 +548,179 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
 
                 case b_A:
                     bool brk2 = true;
-                    
-                    switch (Selection) {
+                    int idx = 0;
+                    int i = 0; 
+                    switch (Selection)
+                    {
                         case 0:
-                            POSCursor(34, 10);
-                            printf("%d.%d.%d.%d", valbuff[0], valbuff[1], valbuff[2], valbuff[3]);
-                            brk2 = true;                        
-                            while (brk2) {                                
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(true, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-
-                                    case ONE:
-                                        if (dns_ip) {
-                                            for (size_t i = 0; i < 3; i++)
-                                            {
-                                                buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] = valbuff[i];
-                                            }
-                                        } else {
-                                            for (size_t i = 0; i < 3; i++)
-                                            {
-                                                buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] = valbuff[i];
-                                            }
-                                        }
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && chr >= '0' && chr <= '9') || chr == '\b') {
-                                            switch (chr) {
-                                                case '\b':
-                                                    valbuff[idx] /= 10;
-                                                break;
-
-                                                default:
-                                                    if(valbuff[idx] + chr - 48 <= 255 && idx < 4){
-                                                        brk2 = false;
-                                                    }                              
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            if(dns_ip) POSCursor(33, 8);
+                            else POSCursor(34, 8);
                         break;
 
                         case 1:
-                            POSCursor(34, 10);
-                            printf("%d.%d.%d.%d        ", valbuff[0], valbuff[1], valbuff[2], valbuff[3]);
-                            brk2 = true;                        
-                            while (brk2) {                                
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(true, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-
-                                    case ONE:
-                                        if (dns_ip) {
-                                            for (size_t i = 0; i < 3; i++)
-                                            {
-                                                buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + 4] = valbuff[i];
-                                            }
-                                        } else {
-                                            for (size_t i = 0; i < 3; i++)
-                                            {
-                                                buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + 4] = valbuff[i];
-                                            }
-                                        }
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && chr >= '0' && chr <= '9') || chr == '\b') {
-                                            switch (chr) {
-                                                case '\b':
-                                                    valbuff[idx] /= 10;
-                                                break;
-
-                                                default:
-                                                    if(valbuff[idx] + chr - 48 <= 255 && idx < 4){
-                                                        brk2 = false;
-                                                    }                              
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            if(dns_ip) POSCursor(34, 10);
+                            else POSCursor(36, 10);
                         break;
 
                         case 2:
-                            POSCursor(34, 10);
-                            printf("%d.%d.%d.%d", valbuff[0], valbuff[1], valbuff[2], valbuff[3]);
-                            brk2 = true;                        
-                            while (brk2) {                                
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(true, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-
-                                    case ONE:
-                                        for (size_t i = 0; i < 3; i++)
-                                        {
-                                            buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + 8] = valbuff[i];
-                                        }
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && chr >= '0' && chr <= '9') || chr == '\b') {
-                                            switch (chr) {
-                                                case '\b':
-                                                    valbuff[idx] /= 10;
-                                                break;
-
-                                                default:
-                                                    if(valbuff[idx] + chr - 48 <= 255 && idx < 4){
-                                                        brk2 = false;
-                                                    }                              
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            POSCursor(32, 12);
                         break;
                     
                         default:
                         break;
                     }
+                    
+                    printf("%s%d%s.%d.%d.%d        ", WHITE_BG_BLACK_FG, valbuff[0], DEFAULT_BG_FG, valbuff[1], valbuff[2], valbuff[3]);
+                    brk2 = true;                    
+                    while (brk2) {                                
+                        static int conX, conY;
+                        int Input = CheckWPAD(0);
+                        WPADData* data = WPAD_Data(0);
+                        int irX = (((data->ir.x) * 76) / 560);
+                        int irY = (((data->ir.y) * 28) / 420);
+                        CON_GetPosition(&conX, &conY);
+                        char chr = keyboard(true, irX, irY);
+                        POSCursor(conX, conY);
+                        VIDEO_WaitVSync();
+
+                        switch (Input) {
+
+                            case ONE:
+                                for (size_t i = 0; i < 4; i++)
+                                {
+                                    if (dns_ip) {
+                                        buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                    } else {
+                                        buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                    }
+                                }
+                                ClearKeyboard();
+                                brk2 = false;
+                                brk = false;
+                            break;
+
+                            case b_A:
+                                if ((chr != '\0' && chr >= '0' && chr <= '9') || chr == '\b') {
+                                    switch (chr) {
+                                        case '\b':
+                                            valbuff[idx] /= 10;
+                                            switch (Selection)
+                                            {
+                                                case 0:
+                                                    if(dns_ip) POSCursor(33, 8);
+                                                    else POSCursor(34, 8);
+                                                break;
+
+                                                case 1:
+                                                    if(dns_ip) POSCursor(34, 10);
+                                                    else POSCursor(36, 10);
+                                                break;
+
+                                                case 2:
+                                                    POSCursor(32, 12);
+                                                break;
+                                            
+                                                default:
+                                                break;
+                                            }
+                                            switch (idx)
+                                            {
+                                                case 0:
+                                                    printf("%s%d%s.%d.%d.%d        ", WHITE_BG_BLACK_FG, valbuff[0], DEFAULT_BG_FG, valbuff[1], valbuff[2], valbuff[3]);
+                                                break;
+
+                                                case 1:
+                                                    printf("%d.%s%d%s.%d.%d        ", valbuff[0], WHITE_BG_BLACK_FG, valbuff[1], DEFAULT_BG_FG, valbuff[2], valbuff[3]);
+                                                break;
+                                                
+                                                case 2:
+                                                    printf("%d.%d.%s%d%s.%d        ", valbuff[0], valbuff[1], WHITE_BG_BLACK_FG, valbuff[2], DEFAULT_BG_FG, valbuff[3]);
+                                                break;
+
+                                                case 3:
+                                                    printf("%d.%d.%d.%s%d%s        ", valbuff[0], valbuff[1], valbuff[2], WHITE_BG_BLACK_FG, valbuff[3], DEFAULT_BG_FG);
+                                                break;
+                                            
+                                                default:
+                                                break;
+                                            }
+                                            if (i > 0) i--;
+                                        break;
+
+                                        default:
+                                            if(((valbuff[idx] + chr - 48) <= 255) && idx < 4){
+                                                valbuff[idx] *= 10;
+                                                valbuff[idx] += chr - 48;
+                                                switch (Selection)
+                                                {
+                                                    case 0:
+                                                        if(dns_ip) POSCursor(33, 8);
+                                                        else POSCursor(34, 8);
+                                                    break;
+
+                                                    case 1:
+                                                        if(dns_ip) POSCursor(34, 10);
+                                                        else POSCursor(36, 10);
+                                                    break;
+
+                                                    case 2:
+                                                        POSCursor(32, 12);
+                                                    break;
+                                                
+                                                    default:
+                                                    break;
+                                                }
+                                                if (i == 2) {
+                                                    idx++;
+                                                    if (idx == 4) {
+                                                        for (size_t i = 0; i < 4; i++)
+                                                        {
+                                                            if (dns_ip) {
+                                                                buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                                            } else {
+                                                                buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                                            }
+                                                        }
+                                                        ClearKeyboard();
+                                                        brk2 = false;
+                                                        brk = false;
+                                                    }
+                                                    i = -1;
+                                                }
+                                                switch (idx)
+                                                {
+                                                    case 0:
+                                                        printf("%s%d%s.%d.%d.%d        ", WHITE_BG_BLACK_FG, valbuff[0], DEFAULT_BG_FG, valbuff[1], valbuff[2], valbuff[3]);
+                                                    break;
+
+                                                    case 1:
+                                                        printf("%d.%s%d%s.%d.%d        ", valbuff[0], WHITE_BG_BLACK_FG, valbuff[1], DEFAULT_BG_FG, valbuff[2], valbuff[3]);
+                                                    break;
+                                                    
+                                                    case 2:
+                                                        printf("%d.%d.%s%d%s.%d        ", valbuff[0], valbuff[1], WHITE_BG_BLACK_FG, valbuff[2], DEFAULT_BG_FG, valbuff[3]);
+                                                    break;
+
+                                                    case 3:
+                                                        printf("%d.%d.%d.%s%d%s        ", valbuff[0], valbuff[1], valbuff[2], WHITE_BG_BLACK_FG, valbuff[3], DEFAULT_BG_FG);
+                                                    break;
+                                                
+                                                    default:
+                                                    break;
+                                                }
+                                            }
+                                            i++;
+                                        break;
+                                    }
+                                }
+                            break;
+                        
+                            default:
+                            break;
+                        }
+                    }
                 break;
+
             }
         }
     }
@@ -731,12 +739,14 @@ void editwireless(int PROFNumber, uint8_t *buff) {
         for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
             putchar(buff[i]);
         }
+        printf("  %d", buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))]);
 
         POSCursor(20, 10);
         printf("PASSKEY : ");
         for (size_t i = (HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
             putchar(buff[i]);
         }
+        printf("  %d", buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))]);
 
         POSCursor(20, 12);
         printf("ENCRYPTION : ");
@@ -757,7 +767,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                 break;
 
                 case DOWN:
-                    if(Selection < 3) {
+                    if(Selection < 2) {
                         POSCursor(18, 8 + (Selection * 2));
                         printf("  ");
                         Selection++;
@@ -781,7 +791,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                     int idx = 0;
                     switch (Selection) {
                         case 0:
-                            idx = buff[(HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 34];
+                            idx = buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))];
                             POSCursor(27 + idx, 8);
                             
                             while (brk2) {
@@ -803,7 +813,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                     break;
 
                                     case ONE:
-                                        buff[(HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 34] = idx;
+                                        buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = idx;
                                         ClearKeyboard();
                                         brk2 = false;
                                         brk = false;
@@ -965,9 +975,8 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
 
             printf("\n   SSID : ");
 
-            for (size_t i = 0; i < buff[HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE)]; i++)
-            {
-                putchar(buff[HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE) + i]);
+            for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
+                putchar(buff[i]);
             }
             
             printf("\n   PASSKEY : ");
@@ -981,8 +990,8 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
 
         POSCursor(0, 25);
         printf(" B : Go back without saving\n");
-        printf(" 1 : Go to submenu (Cursor needs to be : +>)\n");
-        printf(" PLUS : Save and go back");
+        printf(" PLUS : Go to submenu (Cursor needs to be : +>)\n");
+        printf(" 1 : Save and go back");
 
         int offset = 0;
 
@@ -1040,15 +1049,10 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                     ClearScreen();
                 break;
 
-                case HOME:
-                    exit(0);
-                break;
-
-                case PLUS:
+                case ONE:
                     Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, false);
-                    for (size_t i = 0; i < sizeof(cfgbuff); i++)
-                    {
-                        buff[i] = cfgbuff[i];
+                    for (size_t i = 0; i < sizeof(cfgbuff); i++) {
+                        cfgbuff[i] = buff[i];
                     }
                     ISFS_Initialize();
                     s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_RW);
@@ -1063,11 +1067,11 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                     ISFS_Deinitialize();
                 case b_B:
                     ClearScreen();
-                    printprofiledetails(PROFNumber, buff);
+                    printprofiledetails(PROFNumber, cfgbuff);
                     return;
                 break;
 
-                case ONE:
+                case PLUS:
                     switch (Selection) {
                         case 3:
                             editproxy(PROFNumber, buff);
