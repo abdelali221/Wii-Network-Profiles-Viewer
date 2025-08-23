@@ -187,8 +187,8 @@ void editproxy(int PROFNumber, uint8_t *buff) {
         }
 
         POSCursor(0, 26);
-        printf("HOME : Go back\n");
         printf("A : Edit\n");
+        printf("HOME : Go back\n");
         
         POSCursor(18, 6 + (Selection * 2));
         printf("->");
@@ -254,14 +254,14 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                         else shift = true;
                                     break;
 
-                                    case ONE:
+                                    case HOME:
                                         ClearKeyboard();
                                         brk2 = false;
                                         brk = false;
                                     break;
 
                                     case b_A:
-                                        if (chr != '\0' && idx < 32) {
+                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
                                             switch (chr)
                                             {
                                                 case '\b':
@@ -375,14 +375,14 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                         else shift = true;
                                     break;
 
-                                    case ONE:
+                                    case HOME:
                                         ClearKeyboard();
                                         brk2 = false;
                                         brk = false;
                                     break;
 
                                     case b_A:
-                                        if (chr != '\0' && idx < 32) {
+                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
                                             switch (chr)
                                             {
                                                 case '\b':
@@ -435,14 +435,14 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                         else shift = true;
                                     break;
 
-                                    case ONE:
+                                    case HOME:
                                         ClearKeyboard();
                                         brk2 = false;
                                         brk = false;
                                     break;
 
                                     case b_A:
-                                        if (chr != '\0' && idx < 32) {
+                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
                                             switch (chr)
                                             {
                                                 case '\b':
