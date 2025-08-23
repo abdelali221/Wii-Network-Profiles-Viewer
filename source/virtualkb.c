@@ -53,7 +53,7 @@ virtualsymbol kbarray[48] = {
 };
 
 void ClearKeyboard() {
-    for (size_t i = 0; i < 12; i++)
+    for (size_t i = 0; i < 13; i++)
     {
         POSCursor(0, 15 + i);
         printf("\x1b[2K");
@@ -94,7 +94,7 @@ char keyboard(bool shift, int irX, int irY) {
     printf("|_______________________________|___________|");
     for (size_t i = 0; i < 47; i++) {
         POSCursor(KEYBOARD_X + 2 + kbarray[i].COL * 4, 16 + kbarray[i].ROW * 2);
-        if ((irX >= (KEYBOARD_X + 2 + kbarray[i].COL * 4) - 1 && irX <= (KEYBOARD_X + 2 + kbarray[i].COL * 4) + 1) && (irY >= 13 + kbarray[i].ROW * 2) && (irY <= 14 + kbarray[i].ROW * 2)) {
+        if ((irX > (KEYBOARD_X + 2 + kbarray[i].COL * 4) - 3 && irX < (KEYBOARD_X + 2 + kbarray[i].COL * 4) + 2) && (irY >= 13 + kbarray[i].ROW * 2) && (irY <= 14 + kbarray[i].ROW * 2)) {
             printf("%s", WHITE_BG_BLACK_FG);
             if (shift) {
                 currChar = kbarray[i].high_chr;
@@ -109,5 +109,9 @@ char keyboard(bool shift, int irX, int irY) {
         }
         printf("%s", DEFAULT_BG_FG);
     }
+    POSCursor(KEYBOARD_X, 26);
+    printf("B : Shift");
+    if (currChar == '\0') printf(" / Please aim at the keyboard with your WiiMote");
+    else printf("%*c", 48, ' ');
     return currChar;
 }
