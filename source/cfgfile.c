@@ -838,7 +838,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                     break;
 
                                     case b_A:
-                                        if (chr != '\0' && idx < 32) {
+                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
                                             switch (chr)
                                             {
                                                 case '\b':
@@ -894,7 +894,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                     break;
 
                                     case b_A:
-                                        if (chr != '\0' && idx < 32) {
+                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
                                             switch (chr)
                                             {
                                                 case '\b':
