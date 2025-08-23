@@ -93,7 +93,7 @@ int main() {
             exit(0);
         }
     }
-   
+
     sleep(2);
 
     ClearScreen();
@@ -121,6 +121,11 @@ int main() {
         switch (Input) {
             case TWO:
                 editprofile(PROFNumber, buff, cfgpath);
+                ISFS_Initialize();
+                s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
+                ISFS_Read(fcfg, &buff, filest.file_length);
+                ISFS_Close(fcfg);
+                ISFS_Deinitialize();
             break;
 
             case HOME:
