@@ -17,7 +17,7 @@ void Value2Binary(uint8_t *byte, bool *buffer, bool mode) {
         }
     } else {
         *byte = 0;
-        for (size_t i = 0; i < 7; i++) {   
+        for (size_t i = 0; i < 8; i++) {   
             if(buffer[7 - i]) *byte += (int)pow(2, i);
         }        
     }
@@ -185,6 +185,11 @@ void editproxy(int PROFNumber, uint8_t *buff) {
         for (size_t i = (HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
             putchar(buff[i]);
         }
+
+        POSCursor(0, 26);
+        printf("HOME : Go back\n");
+        printf("A : Edit\n");
+        
         POSCursor(18, 6 + (Selection * 2));
         printf("->");
         
@@ -220,6 +225,8 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                 break;
 
                 case b_A:
+                    POSCursor(0, 26);
+                    printf("\x1b[2K");
                     bool brk2 = true;
                     int idx = 0;
                     switch (Selection) {
@@ -512,9 +519,13 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
             printf("Router IP : %d.%d.%d.%d", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 8], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 9], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 10], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 11]);
         }
 
+        POSCursor(0, 26);
+        printf("A : Edit\n");
+        printf("HOME : Go back\n");
+
         POSCursor(18, 8 + (Selection * 2));
         printf("->");
-        u8 valbuff[4] = {0};
+        u16 valbuff[4] = {0};
         
         bool brk = true;
         
@@ -527,7 +538,7 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                 break;
 
                 case DOWN:
-                    if((dns_ip && Selection < 3) || (!dns_ip && Selection < 2)) {
+                    if((dns_ip && Selection < 2) || (!dns_ip && Selection < 1)) {
                         POSCursor(18, 8 + (Selection * 2));
                         printf("  ");
                         Selection++;
@@ -539,6 +550,7 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                 case UP:
                     if (Selection > 0) {
                         POSCursor(18, 8 + (Selection * 2));
+
                          printf("  ");
                         Selection--;
                         POSCursor(18, 8 + (Selection * 2));
@@ -547,6 +559,8 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                 break;
 
                 case b_A:
+                    POSCursor(0, 26);
+                    printf("\x1b[2K");
                     bool brk2 = true;
                     int idx = 0;
                     int i = 0; 
@@ -585,7 +599,7 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
 
                         switch (Input) {
 
-                            case ONE:
+                            case HOME:
                                 for (size_t i = 0; i < 4; i++)
                                 {
                                     if (dns_ip) {
@@ -648,7 +662,7 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                                         break;
 
                                         default:
-                                            if(((valbuff[idx] + chr - 48) <= 255) && idx < 4){
+                                            if((((valbuff[idx] * 10) + chr - 48) <= 255) && idx < 4){
                                                 valbuff[idx] *= 10;
                                                 valbuff[idx] += chr - 48;
                                                 switch (Selection)
@@ -708,8 +722,8 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                                                     default:
                                                     break;
                                                 }
+                                                i++;
                                             }
-                                            i++;
                                         break;
                                     }
                                 }
@@ -739,18 +753,20 @@ void editwireless(int PROFNumber, uint8_t *buff) {
         for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
             putchar(buff[i]);
         }
-        printf("  %d", buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))]);
 
         POSCursor(20, 10);
         printf("PASSKEY : ");
         for (size_t i = (HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
             putchar(buff[i]);
         }
-        printf("  %d", buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))]);
 
         POSCursor(20, 12);
         printf("ENCRYPTION : ");
         printf("%s", decodeencryption(buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]));
+        
+        POSCursor(0, 26);
+        printf("A : Edit\n");
+        printf("HOME : Go back\n");
 
         POSCursor(18, 8 + (Selection * 2));
         printf("->");
@@ -787,6 +803,8 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                 break;
 
                 case b_A:
+                    POSCursor(0, 26);
+                    printf("\x1b[2K");
                     bool brk2 = true;
                     int idx = 0;
                     switch (Selection) {
@@ -1051,13 +1069,8 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
 
                 case ONE:
                     Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, false);
-                    for (size_t i = 0; i < sizeof(cfgbuff); i++) {
-                        cfgbuff[i] = buff[i];
-                    }
                     ISFS_Initialize();
                     s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_RW);
-                    if (fcfg) printf("Succes!");
-                    else printf("Failed!");
                     int ret = ISFS_Write(fcfg, buff, sizeof(buff) - 1);
                     ClearScreen();
                     if (ret == sizeof(buff) - 1) printf("Success!");
@@ -1067,7 +1080,7 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                     ISFS_Deinitialize();
                 case b_B:
                     ClearScreen();
-                    printprofiledetails(PROFNumber, cfgbuff);
+                    printprofiledetails(PROFNumber, buff);
                     return;
                 break;
 
