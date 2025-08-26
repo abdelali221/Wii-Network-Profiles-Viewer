@@ -8,11 +8,12 @@
 // Header and Profiles :
 
 #define PROFSIZE 0x91C
-#define HEADERSIZE 0x8
+#define HEADERSIZE 0x08
+#define ALOUCFLAG 0x04 // At Least One Usable Connection FLAG
 
 // IP and DNS :
 
-#define MANUALIPOFFSET 0x4
+#define MANUALIPOFFSET 0x04
 #define MANUALDNSOFFSET 0x10
 
 // Wireless :

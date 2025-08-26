@@ -31,7 +31,7 @@ char *decodeencryption(char byte) {
             
         break;
 
-        case 0x01: 
+        case 0x01:
 
             return "WEP64";
             
@@ -201,7 +201,34 @@ void editproxy(int PROFNumber, uint8_t *buff) {
             switch (Input) {
 
                 case HOME:
-                    return;
+                    u8 sizeofproxyname = 0;
+                    u8 sizeofproxyusername = 0;
+                    for (size_t i = 0; buff[HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
+                    {
+                        sizeofproxyname++;
+                    }
+
+                    for (size_t i = 0; buff[HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
+                    {
+                        sizeofproxyusername++;
+                    }
+                    
+                    if(sizeofproxyname > 0 && sizeofproxyusername > 0 && (((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) > 0 || !buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1])) {
+                        return;
+                    }
+                    POSCursor(14, 16);
+                    if (sizeofproxyname == 0) {
+                        printf("Please specify a proxy name");
+                    }
+                    POSCursor(14, 17);
+                    if (sizeofproxyusername == 0 && buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1]) {
+                        printf("Please specify a proxy username");
+                    }
+                    POSCursor(14, 18);
+                    if (((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) == 0) {
+                        printf("Port can't be 0");
+                    }
+
                 break;
 
                 case DOWN:
@@ -779,7 +806,12 @@ void editwireless(int PROFNumber, uint8_t *buff) {
             switch (Input) {
 
                 case HOME:
-                    return;
+                    if (buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0 && buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] != 0x00) {
+                        POSCursor(14, 16);
+                        printf("Passkey can't be NULL!");
+                    } else {
+                        return;
+                    }                    
                 break;
 
                 case DOWN:
@@ -830,7 +862,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                         else shift = true;
                                     break;
 
-                                    case ONE:
+                                    case HOME:
                                         buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = idx;
                                         ClearKeyboard();
                                         brk2 = false;
@@ -865,57 +897,61 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                         break;
 
                         case 1:
-                            idx = buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))];
-                            POSCursor(30 + idx, 10);
-                            
-                            while (brk2) {
-                                static bool shift = false;
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(shift, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-                                    case b_B:
-                                        if(shift) shift = false;
-                                        else shift = true;
-                                    break;
-
-                                    case ONE:
-                                        buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = idx;
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                            switch (chr)
-                                            {
-                                                case '\b':
-                                                    if (idx > 0) {
-                                                        printf("\b \b");
-                                                        idx--;
-                                                        buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
-                                                    }
-                                                break;
-                                                
-                                                default:
-                                                    putchar(chr);
-                                                    buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
-                                                    idx++;                                                    
-                                                break;
-                                            }
-                                        }
-                                    break;
+                            if(buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] != 0x00) {
+                                idx = buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))];
+                                POSCursor(30 + idx, 10);
                                 
-                                    default:
-                                    break;
+                                while (brk2) {
+                                    static bool shift = false;
+                                    static int conX, conY;
+                                    int Input = CheckWPAD(0);
+                                    WPADData* data = WPAD_Data(0);
+                                    int irX = (((data->ir.x) * 76) / 560);
+                                    int irY = (((data->ir.y) * 28) / 420);
+                                    CON_GetPosition(&conX, &conY);
+                                    char chr = keyboard(shift, irX, irY);
+                                    POSCursor(conX, conY);
+                                    VIDEO_WaitVSync();
+
+                                    switch (Input) {
+                                        case b_B:
+                                            if(shift) shift = false;
+                                            else shift = true;
+                                        break;
+
+                                        case HOME:
+                                            if((buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] > 0x03 && idx > 7) || (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0x01 && idx == 5) || (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0x02 && idx == 13)) {
+                                                buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = idx;
+                                                ClearKeyboard();
+                                                brk2 = false;
+                                                brk = false;
+                                            }
+                                        break;
+
+                                        case b_A:
+                                            if ((chr != '\0' && idx < 32) || chr == '\b') {
+                                                switch (chr)
+                                                {
+                                                    case '\b':
+                                                        if (idx > 0) {
+                                                            printf("\b \b");
+                                                            idx--;
+                                                            buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
+                                                        }
+                                                    break;
+                                                    
+                                                    default:
+                                                        putchar(chr);
+                                                        buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
+                                                        idx++;                                                    
+                                                    break;
+                                                }
+                                            }
+                                        break;
+                                    
+                                        default:
+                                        break;
+                                    }
                                 }
                             }
                         break;
@@ -924,7 +960,10 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                             buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]++;
                             if (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 3) buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = 4;
                             if (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 7) buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = 0;
-
+                            for (size_t i = 0; i < buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))]; i++) {
+                                buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + i] = '\0';
+                            }
+                            buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = '\0';
                             ClearKeyboard();
                             brk2 = false;
                             brk = false;
@@ -1068,11 +1107,55 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                 break;
 
                 case ONE:
+                    ClearScreen();
+                    if(binary[0]) {
+                        switch (PROFNumber)
+                        {
+                            case 1:
+                                if(buff[HEADERSIZE + (2 * PROFSIZE)] & 0x80) {
+                                    buff[HEADERSIZE + (2 * PROFSIZE)] -= 0x80;
+                                    printf("Connection 3 was active; Disabling it\n");
+                                }
+                                if(buff[HEADERSIZE + PROFSIZE] & 0x80) {
+                                    buff[HEADERSIZE + PROFSIZE] -= 0x80;
+                                    printf("Connection 2 was active; Disabling it\n");
+                                }
+                            break;
+
+                            case 2:
+                                if(buff[HEADERSIZE + (2 * PROFSIZE)] & 0x80) {
+                                    buff[HEADERSIZE + (2 * PROFSIZE)] -= 0x80;
+                                    printf("Connection 3 was active; Disabling it\n");
+                                }
+                                if(buff[HEADERSIZE] & 0x80) {
+                                    buff[HEADERSIZE] -= 0x80;
+                                    printf("Connection 1 was active; Disabling it\n");
+                                }
+                            break;
+
+                            case 3:
+                                if(buff[HEADERSIZE + PROFSIZE] & 0x80) {
+                                    buff[HEADERSIZE + PROFSIZE] -= 0x80;
+                                    printf("Connection 2 was active; Disabling it\n");
+                                }
+                                if(buff[HEADERSIZE] & 0x80) {
+                                    buff[HEADERSIZE] -= 0x80;
+                                    printf("Connection 1 was active; Disabling it\n");
+                                }
+                            break;
+                        
+                        }
+                    }
+                    buff[ALOUCFLAG] = 0;
+                    for (size_t i = 0; i < 2; i++)
+                    {
+                        if (buff[HEADERSIZE + (i * PROFSIZE)] & 0x20) buff[ALOUCFLAG] = 1;
+                    }
+                    
                     Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, false);
                     ISFS_Initialize();
                     s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_RW);
                     int ret = ISFS_Write(fcfg, buff, sizeof(buff) - 1);
-                    ClearScreen();
                     if (ret == sizeof(buff) - 1) printf("Success!");
                     else printf("Failed! %d", ret);
                     sleep(2);
@@ -1080,7 +1163,6 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                     ISFS_Deinitialize();
                 case b_B:
                     ClearScreen();
-                    printprofiledetails(PROFNumber, buff);
                     return;
                 break;
 
