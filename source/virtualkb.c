@@ -81,10 +81,10 @@ char keyboard(bool shift, int irX, int irY) {
     POSCursor(KEYBOARD_X, 23);
     printf("|___|___|___|___|___|___|___|___|___|___|___|");
     POSCursor(KEYBOARD_X, 24);
-    if (irX > KEYBOARD_X && irX < KEYBOARD_X + 31 && irY > 21 && irY < 24) {
+    if (irX > KEYBOARD_X && irX < KEYBOARD_X + 31 && irY > 20 && irY < 24) {
         printf("|             %sSpace%s             | Backspace |", WHITE_BG_BLACK_FG, DEFAULT_BG_FG);
         currChar = ' ';
-    } else if ((irX > KEYBOARD_X + 31 && irX < KEYBOARD_X + 42 && irY > 21 && irY < 24)) {
+    } else if ((irX > KEYBOARD_X + 31 && irX < KEYBOARD_X + 42 && irY > 20 && irY < 24)) {
         printf("|             Space             | %sBackspace%s |", WHITE_BG_BLACK_FG, DEFAULT_BG_FG);
         currChar = '\b';
     } else {

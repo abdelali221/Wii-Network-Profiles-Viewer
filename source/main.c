@@ -126,6 +126,7 @@ int main() {
                 ISFS_Read(fcfg, &buff, filest.file_length);
                 ISFS_Close(fcfg);
                 ISFS_Deinitialize();
+                printprofiledetails(PROFNumber, buff);
             break;
 
             case HOME:
