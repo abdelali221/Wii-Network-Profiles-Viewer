@@ -4,6 +4,7 @@
 #include <ogc/machine/processor.h>
 #include "virtualkb.h"
 #include "cfgfile.h"
+#include <fat.h>
 
 #define VER "1.3"
 
@@ -41,6 +42,9 @@ int main() {
     printf("Use it %sAT YOUR OWN RISK!%s", RED_BG_WHITE_FG, DEFAULT_BG_FG);
     POSCursor(16, 20);
     printf(" Press anything but + if you want to exit...");
+    POSCursor(12, 24);
+    printf("Please check readme.md before using this software :\n\n");
+    printf("       https://github.com/abdelali221/Wii-Network-Profiles-Viewer/");
 
     while (1) {
         int Input = CheckWPAD(0);
