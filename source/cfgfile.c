@@ -155,6 +155,7 @@ void togglebit(bool *buffer, uint8_t bit) {
 }
 
 void editproxy(int PROFNumber, uint8_t *buff) {
+    if((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)] & 0x10)) return;
     int Selection = 0;
     while (1) {
         ClearScreen();
@@ -201,6 +202,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
             switch (Input) {
 
                 case HOME:
+                    if(!(buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)] & 0x10)) return;
                     u8 sizeofproxyname = 0;
                     u8 sizeofproxyusername = 0;
                     for (size_t i = 0; buff[HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
@@ -213,7 +215,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                         sizeofproxyusername++;
                     }
                     
-                    if(sizeofproxyname > 0 && sizeofproxyusername > 0 && (((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) > 0 || !buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1])) {
+                    if(sizeofproxyname > 0 && ((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) > 0  && (sizeofproxyusername > 0 || !buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1])) {
                         return;
                     }
                     POSCursor(14, 16);
@@ -228,7 +230,6 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                     if (((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) == 0) {
                         printf("Port can't be 0");
                     }
-
                 break;
 
                 case DOWN:
@@ -334,7 +335,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
 
                                 switch (Input) {
 
-                                    case ONE:
+                                    case HOME:
                                         buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] = (uint8_t)(proxy >> 8);;
                                         buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1] = (uint8_t)(proxy & 0xFF);
                                         ClearKeyboard();
@@ -1101,6 +1102,7 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                 case b_A:
                     if(Selection < 8) {
                         togglebit(binary, Selection);
+                        Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, false);
                     }
                     brk = false;
                     ClearScreen();
@@ -1151,8 +1153,6 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                     {
                         if (buff[HEADERSIZE + (i * PROFSIZE)] & 0x20) buff[ALOUCFLAG] = 1;
                     }
-                    
-                    Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, false);
                     ISFS_Initialize();
                     s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_RW);
                     int ret = ISFS_Write(fcfg, buff, sizeof(buff) - 1);
