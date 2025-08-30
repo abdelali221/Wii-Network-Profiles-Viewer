@@ -25,7 +25,7 @@ Here's a look at the edit menu :
 
 In this menu there is two types of actions; toggling and going to a submenu.
 
-You can toggle the options by pressing A, or if you want to go to any of the submenus (Proxy, DNS, IP and wireless) just make sure the cursor has a "+" on it, like shown below :
+You can toggle any of the options by pressing A, or if you want to go to any of the submenus (Proxy, DNS, IP and wireless) just make sure the cursor has a "+" on it, like shown below :
 
 <img width="195" height="198" alt="image" src="https://github.com/user-attachments/assets/1543d167-5ef2-4a89-9124-26f3c4c1ebdf" />
 
@@ -45,7 +45,7 @@ When editing a Number type setting (like the Port for instance), the shift will 
 
 When done writing, just press HOME to save and go back, the same key is used to go back to the edit menu.
 
-Note : You can't leave the fields blank if Proxy is enabled.
+Note : You can't leave the fields blank if Proxy is enabled, and you can't access the submenu if proxy is off.
 
 Moving to the DNS submenu (the IP submenu is the same, so I'm not explaining again how to use it), it should look like this when blank : 
 
