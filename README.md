@@ -17,6 +17,8 @@ Now you should see something like this :
 
 You can press LEFT or RIGHT on the D-Pad to switch between profiles, if you desire to edit one of them just go to the profile and press 2.
 
+If you're done just press HOME to exit.
+
 Here's a look at the edit menu :
 
 <img width="626" height="471" alt="image" src="https://github.com/user-attachments/assets/f3eba971-33f2-4205-bc58-2ac83dd4d59e" />
