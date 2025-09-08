@@ -25,37 +25,37 @@ void Value2Binary(uint8_t *byte, bool *buffer, bool mode) {
 
 char *decodeencryption(char byte) {
     switch (byte) {
-        case 0x00: 
+        case OPEN: 
 
             return "OPEN";
             
         break;
 
-        case 0x01:
+        case WEP64:
 
             return "WEP64";
             
         break;
 
-        case 0x02: 
+        case WEP128: 
 
             return "WEP128";
             
         break;
 
-        case 0x04: 
+        case WPA_PSK_TKIP: 
 
             return "WPA-PSK (TKIP)";
             
         break;
 
-        case 0x05: 
+        case WPA2_PSK_AES: 
 
             return "WPA2-PSK (AES)";
             
         break;
 
-        case 0x06: 
+        case WPA_PSK_AES: 
 
             return "WPA-PSK (AES)";
             
@@ -202,7 +202,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
             switch (Input) {
 
                 case HOME:
-                    if(!(buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)] & 0x10)) return;
+                    if((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)] & 0x10)) return;
                     u8 sizeofproxyname = 0;
                     u8 sizeofproxyusername = 0;
                     for (size_t i = 0; buff[HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
@@ -792,6 +792,10 @@ void editwireless(int PROFNumber, uint8_t *buff) {
         printf("ENCRYPTION : ");
         printf("%s", decodeencryption(buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]));
         
+        switch (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]) {
+
+        }
+
         POSCursor(0, 26);
         printf("A : Edit\n");
         printf("HOME : Go back\n");
@@ -807,12 +811,16 @@ void editwireless(int PROFNumber, uint8_t *buff) {
             switch (Input) {
 
                 case HOME:
-                    if (buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0 && buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] != 0x00) {
-                        POSCursor(14, 16);
-                        printf("Passkey can't be NULL!");
-                    } else {
-                        return;
-                    }                    
+                    POSCursor(14, 16);
+                    if (buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0 && buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] != OPEN) {
+                        printf("Passkey can't be NULL!\n");
+                        break;
+                    }
+                    if (buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0) {
+                        printf("Please specify an SSID");
+                        break;
+                    }
+                    return;
                 break;
 
                 case DOWN:
@@ -965,7 +973,6 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                 buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + i] = '\0';
                             }
                             buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = '\0';
-                            ClearKeyboard();
                             brk2 = false;
                             brk = false;
                         break;

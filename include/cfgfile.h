@@ -24,6 +24,15 @@
 #define PASSKEYSIZEOFFSET 0x7ED
 #define ENCRYPTIONTYPEOFFSET 0x7E9
 
+// Security
+
+#define OPEN 0x00
+#define WEP64 0x01
+#define WEP128 0x02
+#define WPA_PSK_TKIP 0x04
+#define WPA2_PSK_AES 0x05
+#define WPA_PSK_AES 0x06
+
 // Proxy :
 
 #define ALTPROXYOFFSET 0x148
