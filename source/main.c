@@ -6,7 +6,7 @@
 #include "cfgfile.h"
 #include <fat.h>
 
-#define VER "1.3"
+#define VER "1.4"
 
 static fstats filest aligned;
 
@@ -48,10 +48,8 @@ int main() {
 
     while (1) {
         int Input = CheckWPAD(0);
-        if (Input == PLUS) {
+        if (Input) {
             break;
-        } else if (Input != 0) {
-            exit(0);
         }
     }
 
@@ -102,16 +100,16 @@ int main() {
 
     ClearScreen();
 
-    u8 aligned buff[filest.file_length + 1];
-
-    for (size_t i = 0; i < sizeof(buff); i++)
-    {
-        buff[i] = 0;
-    }
+    netconfig_t aligned buff;
     
-    ISFS_Read(fcfg, &buff, filest.file_length);
+    int ret = ISFS_Read(fcfg, &buff, filest.file_length);
 
-    printprofiledetails(PROFNumber, buff);
+    if (ret != filest.file_length) {
+        printf("Failed! ret = %d", ret);
+        exit(0);
+    }
+
+    printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
 
     ISFS_Close(fcfg);
 
@@ -130,7 +128,7 @@ int main() {
                 ISFS_Read(fcfg, &buff, filest.file_length);
                 ISFS_Close(fcfg);
                 ISFS_Deinitialize();
-                printprofiledetails(PROFNumber, buff);
+                printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
             break;
 
             case HOME:
@@ -138,16 +136,16 @@ int main() {
             break;
 
             case ONE:
-                dumpfile(buff, sizeof(buff), "sd:/config.dat");
+                dumpfile(&buff, sizeof(buff), "sd:/config.dat");
                 ClearScreen();
-                printprofiledetails(PROFNumber, buff);
+                printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
             break;
 
             case LEFT:
                 if (PROFNumber > 1) {
                     PROFNumber--;
                     ClearScreen();
-                    printprofiledetails(PROFNumber, buff);
+                    printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
                 }
             break;
 
@@ -155,7 +153,7 @@ int main() {
                 if (PROFNumber < 3) {
                     PROFNumber++;
                     ClearScreen();
-                    printprofiledetails(PROFNumber, buff);
+                    printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
                 }
             break;
 

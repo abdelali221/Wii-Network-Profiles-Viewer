@@ -6,23 +6,6 @@
 #include "Input.h"
 #include "virtualkb.h"
 
-void Value2Binary(uint8_t *byte, bool *buffer, bool mode) {
-    if(mode) {
-        for (int i = 7; i >= 0; i--) {
-            if (*byte >> i & 1) {
-                buffer[7 - i] = true;
-            } else {
-                buffer[7 - i] = false;
-            }
-        }
-    } else {
-        *byte = 0;
-        for (size_t i = 0; i < 8; i++) {   
-            if(buffer[7 - i]) *byte += (int)pow(2, i);
-        }        
-    }
-}
-
 char *decodeencryption(char byte) {
     switch (byte) {
         case OPEN: 
@@ -67,7 +50,7 @@ char *decodeencryption(char byte) {
     }
 }
 
-void dumpfile(void *buff, size_t length, const char *path) {
+void dumpfile(netconfig_t *buff, size_t length, const char *path) {
     fatInitDefault();
     FILE* dmpf = fopen(path, "w+");
     if(!dmpf) return;
@@ -82,65 +65,46 @@ void dumpfile(void *buff, size_t length, const char *path) {
     sleep(2);
 }
 
-void printprofiledetails(int PROFNumber, uint8_t *buff) {
+void printprofiledetails(int PROFNumber, connection_t *profile) {
     if (PROFNumber > 0 && PROFNumber < 4) {
-        bool binary[8] = {false};
 
-        Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, true);
-
-        printf("<Connection %d>\n", PROFNumber);
-        printf("Connection Selected? %s\n", binary[0] ? "Yes" : "No");
-        printf("Use PMTU Recovery? %s\n", binary[1] ? "Yes" : "No");
-        printf("Internet test passed? %s\n", binary[2] ? "Yes" : "No");
-        printf("Use Proxy? %s\n", binary[3] ? "Yes" : "No");
-        if (binary[3]) {
+        printf("<Connection %d %X>\n", PROFNumber, profile->flags);
+        printf("Connection Selected? %s\n", (profile->flags & CONNECTION_SELECTED) ? "Yes" : "No");
+        printf("Use PMTU Recovery? %s\n", (profile->flags & USE_PMTU) ? "Yes" : "No");
+        printf("Internet test passed? %s\n", (profile->flags & TEST_PASSED) ? "Yes" : "No");
+        printf("Use Proxy? %s\n", (profile->flags & USE_PROXY) ? "Yes" : "No");
+        if (profile->flags & USE_PROXY) {
             printf("  + Proxy Server : ");
-            for (size_t i = (HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                putchar(buff[i]);
+            
+            printf("\n  + Port : %d", profile->proxy_settings.proxy_port);
+            
+            if (profile->proxy_settings.use_proxy_userandpass) {
+                printf("\n  + Username : %s", profile->proxy_settings.proxy_username);
+                printf("\n  + Password : %s", profile->proxy_settings.proxy_password);
             }
-            printf("\n  + Port : %d", (buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]);
-            if (buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1]) {
-                printf("\n  + Username : ");
-                for (size_t i = (HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                    putchar(buff[i]);
-                }
-                printf("\n  + Password : ");
-                for (size_t i = (HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                    putchar(buff[i]);
-                }               
-            }
+            
             putchar('\n'); 
         }
-        printf("PPPoE? %s\n", binary[4] ? "Yes" : "No");
-        printf("DNS Source? %s\n", binary[5] ? "Auto" : "Manual");
-        if (!binary[5]) {
-            printf("  + Primary DNS : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
-            printf("  + Secondary DNS : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 6], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
+        printf("PPPoE? %s\n", (profile->flags & PPPOE) ? "Yes" : "No");
+        printf("DNS Source? %s\n", (profile->flags & DNS) ? "Auto" : "Manual");
+        if (!(profile->flags & DNS)) {
+            printf("  + Primary DNS : %d.%d.%d.%d\n", profile->dns1[0], profile->dns1[1], profile->dns1[2], profile->dns1[3]);
+            printf("  + Secondary DNS : %d.%d.%d.%d\n", profile->dns2[0], profile->dns2[1], profile->dns2[2], profile->dns2[3]);
         }
-        printf("IP source? %s\n", binary[6] ? "DHCP" : "Manual");
-        if (!binary[6]) {
-            printf("  + IP Address : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
-            printf("  + Subnet Mask : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 6], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
-            printf("  + Router IP : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 8], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 9], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 10], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 11]);
+        printf("IP source? %s\n", (profile->flags & DHCP) ? "DHCP" : "Manual");
+        if (!(profile->flags & DHCP)) {
+            printf("  + IP Address : %d.%d.%d.%d\n", profile->ip[0], profile->ip[1], profile->ip[2], profile->ip[3]);
+            printf("  + Subnet Mask : %d.%d.%d.%d\n", profile->netmask[0], profile->netmask[1], profile->netmask[2], profile->netmask[3]);
+            printf("  + Router IP : %d.%d.%d.%d\n",profile->gateway[0], profile->gateway[1], profile->gateway[2], profile->gateway[3] );
 
         }
-        printf("Interface? %s\n", binary[7] ? "Wired" : "Wireless");
+        printf("Interface? %s\n", (profile->flags & INTERFACE) ? "Wired" : "Wireless");
 
-        if (!binary[7]) {
+        if (!(profile->flags & INTERFACE)) {
 
-            printf("\nSSID : ");
-
-            for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                putchar(buff[i]);
-            }
-
-            printf("\nPASSKEY : ");
-
-            for (size_t i = 0; i < buff[HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE)]; i++) {
-                putchar(buff[HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE) + i]);
-            }
-
-            printf("\nENCRYPTION : %s", decodeencryption(buff[HEADERSIZE + ENCRYPTIONTYPEOFFSET + (PROFNumber - 1) * PROFSIZE]));
+            printf("\nSSID : %s", profile->ssid);
+            printf("\nPASSKEY : %s", profile->key);
+            printf("\nENCRYPTION : %s", decodeencryption(profile->encryption));
         }
     }
 
@@ -149,13 +113,10 @@ void printprofiledetails(int PROFNumber, uint8_t *buff) {
     printf(" 2 : Edit current profile");
 }
 
-void togglebit(bool *buffer, uint8_t bit) {
-    if(buffer[bit]) buffer[bit] = false;
-    else buffer[bit] = true;
-}
 
-void editproxy(int PROFNumber, uint8_t *buff) {
-    if((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)] & 0x10)) return;
+
+void editproxy(int PROFNumber, connection_t *profile) {
+    if(profile->flags & 0x10) return;
     int Selection = 0;
     while (1) {
         ClearScreen();
@@ -164,28 +125,20 @@ void editproxy(int PROFNumber, uint8_t *buff) {
         printf("Proxy Settings :");
 
         POSCursor(20, 6);
-        printf("Proxy Server : ");
-        for (size_t i = (HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-            putchar(buff[i]);
-        }
+        printf("Proxy Server : %s", profile->proxy_settings.proxy_name);
+
 
         POSCursor(20, 8);
-        printf("Port : %d", (buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]);
+        printf("Port : %d", profile->proxy_settings.proxy_port);
 
         POSCursor(20, 10);
-        printf("Needs Username/Password? %s", buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1] ? "Yes" : "No");
+        printf("Needs Username/Password? %s", profile->proxy_settings.use_proxy_userandpass ? "Yes" : "No");
 
         POSCursor(20, 12);
-        printf("Username : ");
-        for (size_t i = (HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-            putchar(buff[i]);
-        }
+        printf("Username : %s", profile->proxy_settings.proxy_username);
 
         POSCursor(20, 14);
-        printf("Password : ");
-        for (size_t i = (HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-            putchar(buff[i]);
-        }
+        printf("Password : %s", profile->proxy_settings.proxy_password);
 
         POSCursor(0, 26);
         printf("A : Edit\n");
@@ -202,32 +155,21 @@ void editproxy(int PROFNumber, uint8_t *buff) {
             switch (Input) {
 
                 case HOME:
-                    if((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)] & 0x10)) return;
-                    u8 sizeofproxyname = 0;
-                    u8 sizeofproxyusername = 0;
-                    for (size_t i = 0; buff[HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
-                    {
-                        sizeofproxyname++;
-                    }
-
-                    for (size_t i = 0; buff[HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE) + i] != '\0'; i++)
-                    {
-                        sizeofproxyusername++;
-                    }
+                    if(profile->flags & 0x10) return;
                     
-                    if(sizeofproxyname > 0 && ((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) > 0  && (sizeofproxyusername > 0 || !buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1])) {
+                    if(strlen((char*)profile->proxy_settings.proxy_name) > 0 && profile->proxy_settings.proxy_port > 0  && (strlen((char*)profile->proxy_settings.proxy_username) > 0 || !profile->proxy_settings.use_proxy_userandpass)) {
                         return;
                     }
                     POSCursor(14, 16);
-                    if (sizeofproxyname == 0) {
+                    if (strlen((char*)profile->proxy_settings.proxy_name) == 0) {
                         printf("Please specify a proxy name");
                     }
                     POSCursor(14, 17);
-                    if (sizeofproxyusername == 0 && buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1]) {
+                    if (strlen((char*)profile->proxy_settings.proxy_username) == 0 && profile->proxy_settings.use_proxy_userandpass) {
                         printf("Please specify a proxy username");
                     }
                     POSCursor(14, 18);
-                    if (((buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]) == 0) {
+                    if (profile->proxy_settings.proxy_port == 0) {
                         printf("Port can't be 0");
                     }
                 break;
@@ -259,9 +201,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                     int idx = 0;
                     switch (Selection) {
                         case 0:
-                            for (size_t i = 0; buff[(HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)) + i] != '\0'; i++) {
-                                idx++;
-                            }
+                            idx = strlen((char*)profile->proxy_settings.proxy_name);
                             POSCursor(35 + idx, 6);
                             
                             while (brk2) {
@@ -296,16 +236,16 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                                     if (idx > 0) {
                                                         printf("\b \b");
                                                         idx--;
-                                                        buff[(HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
-                                                        buff[(HEADERSIZE + PROXYSERVERNAMEOFFSET + ALTPROXYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
+                                                        profile->proxy_settings.proxy_name[idx] = '\0';
+                                                        profile->proxy_settings_copy.proxy_name[idx] = '\0';
                                                     }
                                                 case ' ':
                                                 break;
                                             
                                                 default:
                                                     putchar(chr);
-                                                    buff[(HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
-                                                    buff[(HEADERSIZE + PROXYSERVERNAMEOFFSET + ALTPROXYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
+                                                    profile->proxy_settings.proxy_name[idx] = chr;
+                                                    profile->proxy_settings_copy.proxy_name[idx] = chr;
                                                     idx++;                                                    
                                                 break;
                                             }
@@ -336,8 +276,8 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                 switch (Input) {
 
                                     case HOME:
-                                        buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] = (uint8_t)(proxy >> 8);;
-                                        buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1] = (uint8_t)(proxy & 0xFF);
+                                        profile->proxy_settings.proxy_port = proxy;
+                                        profile->proxy_settings_copy.proxy_port = proxy;
                                         ClearKeyboard();
                                         brk2 = false;
                                         brk = false;
@@ -372,17 +312,21 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                         break;
 
                         case 2:
-                            if (buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1]) buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1] = 0;
-                            else buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1] = 1;
+                            if (profile->proxy_settings.use_proxy_userandpass) {
+                                profile->proxy_settings.use_proxy_userandpass = 0;
+                                profile->proxy_settings_copy.use_proxy_userandpass = 0;
+                            }
+                            else {
+                                profile->proxy_settings.use_proxy_userandpass = 1;
+                                profile->proxy_settings_copy.use_proxy_userandpass = 1;
+                            }
 
                             brk2 = false;
                             brk = false;
                         break;
 
                         case 3:
-                            for (size_t i = 0; buff[(HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)) + i] != '\0'; i++) {
-                                idx++;
-                            }
+                            idx = strlen((char*)profile->proxy_settings.proxy_username);
                             POSCursor(31 + idx, 12);
                             
                             while (brk2) {
@@ -417,16 +361,16 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                                     if (idx > 0) {
                                                         printf("\b \b");
                                                         idx--;
-                                                        buff[(HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
-                                                        buff[(HEADERSIZE + PROXYUSRNAMEOFFSET + ALTPROXYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
+                                                        profile->proxy_settings.proxy_username[idx] = '\0';
+                                                        profile->proxy_settings_copy.proxy_username[idx] = '\0';
                                                     }
                                                 case ' ':
                                                 break;
                                             
                                                 default:
                                                     putchar(chr);
-                                                    buff[(HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
-                                                    buff[(HEADERSIZE + PROXYUSRNAMEOFFSET + ALTPROXYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
+                                                    profile->proxy_settings.proxy_username[idx] = chr;
+                                                    profile->proxy_settings_copy.proxy_username[idx] = chr;
                                                     idx++;                                                    
                                                 break;
                                             }
@@ -440,9 +384,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                         break;
 
                         case 4:
-                            for (size_t i = 0; buff[(HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + i] != '\0'; i++) {
-                                idx++;
-                            }
+                            idx = strlen((char*)profile->proxy_settings.proxy_password);
                             POSCursor(31 + idx, 14);
                             
                             while (brk2) {
@@ -477,16 +419,16 @@ void editproxy(int PROFNumber, uint8_t *buff) {
                                                     if (idx > 0) {
                                                         printf("\b \b");
                                                         idx--;
-                                                        buff[(HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
-                                                        buff[(HEADERSIZE + PROXYPASSWORDOFFSET + ALTPROXYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
+                                                        profile->proxy_settings.proxy_password[idx] = '\0';
+                                                        profile->proxy_settings_copy.proxy_password[idx] = '\0';
                                                     }
                                                 case ' ':
                                                 break;
                                             
                                                 default:
                                                     putchar(chr);
-                                                    buff[(HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
-                                                    buff[(HEADERSIZE + PROXYPASSWORDOFFSET + ALTPROXYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
+                                                    profile->proxy_settings.proxy_password[idx] = chr;
+                                                    profile->proxy_settings_copy.proxy_password[idx] = chr;
                                                     idx++;                                                    
                                                 break;
                                             }
@@ -508,7 +450,7 @@ void editproxy(int PROFNumber, uint8_t *buff) {
     }    
 }
 
-void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
+void editdns_ip(int PROFNumber, connection_t *profile, bool dns_ip) {
     int Selection = 0;
     while (1) {
         ClearScreen();
@@ -522,29 +464,21 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
 
         POSCursor(20, 8);
         if(dns_ip) {
-            printf("IP Address : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
+            printf("IP Address : %d.%d.%d.%d\n", profile->ip[0], profile->ip[1], profile->ip[2], profile->ip[3]);
         } else {
-            printf("Primary DNS : ");
-            for (size_t i = (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)); i < (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 4; i++) {
-                printf("%d.", buff[i]);
-            }
-            printf("\b \b");
+            printf("Primary DNS :  %d.%d.%d.%d\n", profile->dns1[0], profile->dns1[1], profile->dns1[2], profile->dns1[3]);
         }
         
         POSCursor(20, 10);
         if(dns_ip) {
-            printf("Subnet Mask : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
+            printf("Subnet Mask : %d.%d.%d.%d\n", profile->netmask[0], profile->netmask[1], profile->netmask[2], profile->netmask[3]);
         } else {
-            printf("Secondary DNS : ");
-            for (size_t i = (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 4; i < (HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)) + 8; i++) {
-                printf("%d.", buff[i]);
-            }
-            printf("\b \b");
+            printf("Secondary DNS : %d.%d.%d.%d\n", profile->dns2[0], profile->dns2[1], profile->dns2[2], profile->dns2[3]);
         }
 
         if (dns_ip) {
             POSCursor(20, 12);
-            printf("Router IP : %d.%d.%d.%d", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 8], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 9], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 10], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 11]);
+            printf("Router IP : %d.%d.%d.%d", profile->gateway[0], profile->gateway[1], profile->gateway[2], profile->gateway[3]);
         }
 
         POSCursor(0, 26);
@@ -631,9 +565,9 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                                 for (size_t i = 0; i < 4; i++)
                                 {
                                     if (dns_ip) {
-                                        buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                        profile->ip[i] = valbuff[i];
                                     } else {
-                                        buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                       profile->dns1[i] = valbuff[i];
                                     }
                                 }
                                 ClearKeyboard();
@@ -718,9 +652,9 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
                                                         for (size_t i = 0; i < 4; i++)
                                                         {
                                                             if (dns_ip) {
-                                                                buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                                                profile->ip[i] = valbuff[i];
                                                             } else {
-                                                                buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + i + (Selection * 4)] = valbuff[i];
+                                                                profile->dns1[i] = valbuff[i];
                                                             }
                                                         }
                                                         ClearKeyboard();
@@ -768,7 +702,7 @@ void editdns_ip(int PROFNumber, uint8_t *buff, bool dns_ip) {
     }
 }
 
-void editwireless(int PROFNumber, uint8_t *buff) {
+void editwireless(int PROFNumber, connection_t *profile) {
     int Selection = 0;
     while (1) {
         ClearScreen();
@@ -777,24 +711,13 @@ void editwireless(int PROFNumber, uint8_t *buff) {
         printf("WIFI Settings :");
 
         POSCursor(20, 8);
-        printf("SSID : ");
-        for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-            putchar(buff[i]);
-        }
+        printf("SSID : %s", profile->ssid);
 
         POSCursor(20, 10);
-        printf("PASSKEY : ");
-        for (size_t i = (HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-            putchar(buff[i]);
-        }
+        printf("PASSKEY : %s", profile->key);
 
         POSCursor(20, 12);
-        printf("ENCRYPTION : ");
-        printf("%s", decodeencryption(buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]));
-        
-        switch (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]) {
-
-        }
+        printf("ENCRYPTION : %s",decodeencryption(profile->encryption));
 
         POSCursor(0, 26);
         printf("A : Edit\n");
@@ -812,11 +735,11 @@ void editwireless(int PROFNumber, uint8_t *buff) {
 
                 case HOME:
                     POSCursor(14, 16);
-                    if (buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0 && buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] != OPEN) {
+                    if (profile->key_length == 0 && profile->encryption != OPEN) {
                         printf("Passkey can't be NULL!\n");
                         break;
                     }
-                    if (buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0) {
+                    if (profile->ssid_length == 0) {
                         printf("Please specify an SSID");
                         break;
                     }
@@ -850,7 +773,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                     int idx = 0;
                     switch (Selection) {
                         case 0:
-                            idx = buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))];
+                            idx = profile->ssid_length;
                             POSCursor(27 + idx, 8);
                             
                             while (brk2) {
@@ -872,7 +795,7 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                     break;
 
                                     case HOME:
-                                        buff[(HEADERSIZE + SSIDSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = idx;
+                                        profile->ssid_length = idx;
                                         ClearKeyboard();
                                         brk2 = false;
                                         brk = false;
@@ -886,13 +809,13 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                                     if (idx > 0) {
                                                         printf("\b \b");
                                                         idx--;
-                                                        buff[(HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
+                                                        profile->ssid[idx] = '\0';
                                                     }
                                                 break;
 
                                                 default:
                                                     putchar(chr);
-                                                    buff[(HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
+                                                    profile->ssid[idx] = chr;
                                                     idx++;                                                    
                                                 break;
                                             }
@@ -906,8 +829,8 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                         break;
 
                         case 1:
-                            if(buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] != 0x00) {
-                                idx = buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))];
+                            if(profile->encryption != 0x00) {
+                                idx = profile->key_length;
                                 POSCursor(30 + idx, 10);
                                 
                                 while (brk2) {
@@ -929,8 +852,8 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                         break;
 
                                         case HOME:
-                                            if((buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] > 0x03 && idx > 7) || (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0x01 && idx == 5) || (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 0x02 && idx == 13)) {
-                                                buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = idx;
+                                            if((profile->encryption > 0x03 && idx > 7) || (profile->encryption == 0x01 && idx == 5) || (profile->encryption == 0x02 && idx == 13)) {
+                                                profile->key_length = idx;
                                                 ClearKeyboard();
                                                 brk2 = false;
                                                 brk = false;
@@ -945,13 +868,13 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                                                         if (idx > 0) {
                                                             printf("\b \b");
                                                             idx--;
-                                                            buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = '\0';
+                                                            profile->key[idx] = '\0';
                                                         }
                                                     break;
                                                     
                                                     default:
                                                         putchar(chr);
-                                                        buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + idx] = chr;
+                                                        profile->key[idx] = chr;
                                                         idx++;                                                    
                                                     break;
                                                 }
@@ -966,13 +889,13 @@ void editwireless(int PROFNumber, uint8_t *buff) {
                         break;
 
                         case 2:
-                            buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))]++;
-                            if (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 3) buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = 4;
-                            if (buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] == 7) buff[(HEADERSIZE + ENCRYPTIONTYPEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = 0;
-                            for (size_t i = 0; i < buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))]; i++) {
-                                buff[(HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE)) + i] = '\0';
+                            profile->encryption++;
+                            if (profile->encryption  == 3) profile->encryption = 4;
+                            if (profile->encryption  == 7) profile->encryption = 0;
+                            for (size_t i = 0; i < profile->key_length; i++) {
+                                profile->key[i] = '\0';
                             }
-                            buff[(HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE))] = '\0';
+                            profile->key_length = '\0';
                             brk2 = false;
                             brk = false;
                         break;
@@ -986,71 +909,49 @@ void editwireless(int PROFNumber, uint8_t *buff) {
     }    
 }
 
-void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
-    u8 aligned buff[7005];
-    for (size_t i = 0; i < sizeof(buff); i++)
-    {
-        buff[i] = cfgbuff[i];
-    }    
+void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
     ClearScreen();
     int Selection = 0;
     bool stayinloop = true;
-    bool binary[8] = {false};
-    Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, true);
     while (stayinloop) {
         POSCursor(0, 0);
-        printf("<Connection %d>\n", PROFNumber);
-        printf("   Connection Selected? %s\n", binary[0] ? "Yes" : "No");
-        printf("   Use PMTU Recovery? %s\n", binary[1] ? "Yes" : "No");
-        printf("   Internet test passed? %s\n", binary[2] ? "Yes" : "No");
-        printf("   Use Proxy? %s\n", binary[3] ? "Yes" : "No");
-        if (binary[3]) {
+        printf("<Connection %d %X>\n", PROFNumber, buff.connection[PROFNumber - 1].flags);
+        printf("   Connection Selected? %s\n", (buff.connection[PROFNumber - 1].flags & CONNECTION_SELECTED) ? "Yes" : "No");
+        printf("   Use PMTU Recovery? %s\n", (buff.connection[PROFNumber - 1].flags & USE_PMTU) ? "Yes" : "No");
+        printf("   Internet test passed? %s\n", (buff.connection[PROFNumber - 1].flags & TEST_PASSED) ? "Yes" : "No");
+        printf("   Use Proxy? %s\n", (buff.connection[PROFNumber - 1].flags & USE_PROXY) ? "Yes" : "No");
+        if (buff.connection[PROFNumber - 1].flags & USE_PROXY) {
             printf("     + Proxy Server : ");
-            for (size_t i = (HEADERSIZE + PROXYSERVERNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                putchar(buff[i]);
-            }
-            printf("\n     + Port : %d", (buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET] * (0x10) * (0x10)) + buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE) + PROXYPORTOFFSET + 1]);
-            if (buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1]) {
-                printf("\n     + Username : ");
-                for (size_t i = (HEADERSIZE + PROXYUSRNAMEOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                    putchar(buff[i]);
-                }
-                printf("\n     + Password : ");
-                for (size_t i = (HEADERSIZE + PROXYPASSWORDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                    putchar(buff[i]);
-                }             
-            }
-            putchar('\n');
-        }
-        printf("   PPPoE? %s\n", binary[4] ? "Yes" : "No");
-        printf("   DNS Source? %s\n", binary[5] ? "Auto" : "Manual");
-        if (!binary[5]) {
-            printf("     + Primary DNS : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
-            printf("     + Secondary DNS : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 6], buff[HEADERSIZE + MANUALDNSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
-        }
-        printf("   IP source? %s\n", binary[6] ? "DHCP" : "Manual");
-        if (!binary[6]) {
-            printf("     + IP Address : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE)], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 2], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 3]);
-            printf("     + Subnet Mask : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 4], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 5], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 6], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 7]);
-            printf("     + Router IP : %d.%d.%d.%d\n", buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 8], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 9], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 10], buff[HEADERSIZE + MANUALIPOFFSET + ((PROFNumber - 1) * PROFSIZE) + 11]);
-        }
-        printf("   Interface? %s\n", binary[7] ? "Wired" : "Wireless");
-
-        if (!binary[7]) {
-
-            printf("\n   SSID : ");
-
-            for (size_t i = (HEADERSIZE + SSIDOFFSET + ((PROFNumber - 1) * PROFSIZE)); buff[i] != '\0'; i++) {
-                putchar(buff[i]);
+            
+            printf("\n     + Port : %d", buff.connection[PROFNumber - 1].proxy_settings.proxy_port);
+            
+            if (buff.connection[PROFNumber - 1].proxy_settings.use_proxy_userandpass) {
+                printf("\n     + Username : %s", buff.connection[PROFNumber - 1].proxy_settings.proxy_username);
+                printf("\n     + Password : %s", buff.connection[PROFNumber - 1].proxy_settings.proxy_password);
             }
             
-            printf("\n   PASSKEY : ");
+            putchar('\n'); 
+        }
+        printf("   PPPoE? %s\n", (buff.connection[PROFNumber - 1].flags & PPPOE) ? "Yes" : "No");
+        printf("   DNS Source? %s\n", (buff.connection[PROFNumber - 1].flags & DNS) ? "Auto" : "Manual");
+        if (!(buff.connection[PROFNumber - 1].flags & DNS)) {
+            printf("     + Primary DNS : %d.%d.%d.%d\n", buff.connection[PROFNumber - 1].dns1[0], buff.connection[PROFNumber - 1].dns1[1], buff.connection[PROFNumber - 1].dns1[2], buff.connection[PROFNumber - 1].dns1[3]);
+            printf("     + Secondary DNS : %d.%d.%d.%d\n", buff.connection[PROFNumber - 1].dns2[0], buff.connection[PROFNumber - 1].dns2[1], buff.connection[PROFNumber - 1].dns2[2], buff.connection[PROFNumber - 1].dns2[3]);
+        }
+        printf("   IP source? %s\n", (buff.connection[PROFNumber - 1].flags & DHCP) ? "DHCP" : "Manual");
+        if (!(buff.connection[PROFNumber - 1].flags & DHCP)) {
+            printf("     + IP Address : %d.%d.%d.%d\n", buff.connection[PROFNumber - 1].ip[0], buff.connection[PROFNumber - 1].ip[1], buff.connection[PROFNumber - 1].ip[2], buff.connection[PROFNumber - 1].ip[3]);
+            printf("     + Subnet Mask : %d.%d.%d.%d\n", buff.connection[PROFNumber - 1].netmask[0], buff.connection[PROFNumber - 1].netmask[1], buff.connection[PROFNumber - 1].netmask[2], buff.connection[PROFNumber - 1].netmask[3]);
+            printf("     + Router IP : %d.%d.%d.%d\n",buff.connection[PROFNumber - 1].gateway[0], buff.connection[PROFNumber - 1].gateway[1], buff.connection[PROFNumber - 1].gateway[2], buff.connection[PROFNumber - 1].gateway[3] );
 
-            for (size_t i = 0; i < buff[HEADERSIZE + PASSKEYSIZEOFFSET + ((PROFNumber - 1) * PROFSIZE)]; i++) {
-                putchar(buff[HEADERSIZE + PASSKEYOFFSET + ((PROFNumber - 1) * PROFSIZE) + i]);
-            }
+        }
+        printf("   Interface? %s\n", (buff.connection[PROFNumber - 1].flags & INTERFACE) ? "Wired" : "Wireless");
 
-            printf("\n   ENCRYPTION : %s", decodeencryption(buff[HEADERSIZE + ENCRYPTIONTYPEOFFSET + (PROFNumber - 1) * PROFSIZE]));
+        if (!(buff.connection[PROFNumber - 1].flags & INTERFACE)) {
+
+            printf("\nSSID : %s", buff.connection[PROFNumber - 1].ssid);
+            printf("\nPASSKEY : %s", buff.connection[PROFNumber - 1].key);
+            printf("\nENCRYPTION : %s", decodeencryption(buff.connection[PROFNumber - 1].encryption));
         }
 
         POSCursor(0, 25);
@@ -1061,16 +962,16 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
         int offset = 0;
 
         if (Selection > 3) {
-            offset += (binary[3] * (2 + (buff[HEADERSIZE + PROXYFLAGSOFFSET + ((PROFNumber - 1) * PROFSIZE) + 1] * 2)));
+            offset += ((buff.connection[PROFNumber - 1].flags & USE_PROXY) * (2 + (buff.connection[PROFNumber - 1].proxy_settings.use_proxy_userandpass)));
         }
         if (Selection > 5) {
-            offset += (!binary[5]) ? 2 : 0;
+            offset += (!(buff.connection[PROFNumber - 1].flags & DNS)) ? 2 : 0;
         }
         if (Selection > 6) {
-            offset += (!binary[6]) ? 3 : 0;
+            offset += (!(buff.connection[PROFNumber - 1].flags & DHCP)) ? 3 : 0;
         }
         if (Selection > 7) {
-            offset += (!binary[7]) ? 1 : 0;
+            offset += (!(buff.connection[PROFNumber - 1].flags & INTERFACE)) ? 1 : 0;
         }
 
         POSCursor(0, 2 + Selection + offset);
@@ -1093,7 +994,7 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
 
             switch (Input) {
                 case DOWN:
-                    if(Selection < 7 + (1 - binary[7])) {
+                    if(Selection < 7 + (1 - (buff.connection[PROFNumber - 1].flags & INTERFACE))) {
                         Selection++;
                         brk = false;
                     }
@@ -1108,8 +1009,8 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
 
                 case b_A:
                     if(Selection < 8) {
-                        togglebit(binary, Selection);
-                        Value2Binary(&buff[HEADERSIZE + ((PROFNumber - 1) * PROFSIZE)], binary, false);
+                        
+                        
                     }
                     brk = false;
                     ClearScreen();
@@ -1117,52 +1018,51 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
 
                 case ONE:
                     ClearScreen();
-                    if(binary[0]) {
+                    if((buff.connection[PROFNumber - 1].flags & CONNECTION_SELECTED)) {
                         switch (PROFNumber)
                         {
                             case 1:
-                                if(buff[HEADERSIZE + (2 * PROFSIZE)] & 0x80) {
-                                    buff[HEADERSIZE + (2 * PROFSIZE)] -= 0x80;
+                                if(buff.connection[2].flags & 0x80) {
+                                    buff.connection[2].flags -= 0x80;
                                     printf("Connection 3 was active; Disabling it\n");
                                 }
-                                if(buff[HEADERSIZE + PROFSIZE] & 0x80) {
-                                    buff[HEADERSIZE + PROFSIZE] -= 0x80;
+                                if(buff.connection[1].flags & 0x80) {
+                                    buff.connection[1].flags -= 0x80;
                                     printf("Connection 2 was active; Disabling it\n");
                                 }
                             break;
 
                             case 2:
-                                if(buff[HEADERSIZE + (2 * PROFSIZE)] & 0x80) {
-                                    buff[HEADERSIZE + (2 * PROFSIZE)] -= 0x80;
+                                if(buff.connection[2].flags & 0x80) {
+                                    buff.connection[2].flags -= 0x80;
                                     printf("Connection 3 was active; Disabling it\n");
                                 }
-                                if(buff[HEADERSIZE] & 0x80) {
-                                    buff[HEADERSIZE] -= 0x80;
+                                if(buff.connection[0].flags & 0x80) {
+                                    buff.connection[0].flags -= 0x80;
                                     printf("Connection 1 was active; Disabling it\n");
                                 }
                             break;
 
                             case 3:
-                                if(buff[HEADERSIZE + PROFSIZE] & 0x80) {
-                                    buff[HEADERSIZE + PROFSIZE] -= 0x80;
+                                if(buff.connection[1].flags & 0x80) {
+                                    buff.connection[1].flags -= 0x80;
                                     printf("Connection 2 was active; Disabling it\n");
                                 }
-                                if(buff[HEADERSIZE] & 0x80) {
-                                    buff[HEADERSIZE] -= 0x80;
+                                if(buff.connection[0].flags & 0x80) {
+                                    buff.connection[0].flags -= 0x80;
                                     printf("Connection 1 was active; Disabling it\n");
                                 }
                             break;
                         
                         }
                     }
-                    buff[ALOUCFLAG] = 0;
                     for (size_t i = 0; i < 2; i++)
                     {
-                        if (buff[HEADERSIZE + (i * PROFSIZE)] & 0x20) buff[ALOUCFLAG] = 1;
+                        if (buff.connection[i].flags & 0x20) buff.header4 = 1;
                     }
                     ISFS_Initialize();
                     s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_RW);
-                    int ret = ISFS_Write(fcfg, buff, sizeof(buff) - 1);
+                    int ret = ISFS_Write(fcfg, &buff, sizeof(buff) - 1);
                     if (ret == sizeof(buff) - 1) printf("Success!");
                     else printf("Failed! %d", ret);
                     sleep(2);
@@ -1176,25 +1076,25 @@ void editprofile(int PROFNumber, uint8_t *cfgbuff, const char *cfgpath) {
                 case PLUS:
                     switch (Selection) {
                         case 3:
-                            editproxy(PROFNumber, buff);
+                            editproxy(PROFNumber, &buff.connection[PROFNumber - 1]);
                             brk = false;
                             ClearScreen();
                         break;
 
                         case 5:
-                            editdns_ip(PROFNumber, buff, false);
+                            editdns_ip(PROFNumber, &buff.connection[PROFNumber - 1], false);
                             brk = false;
                             ClearScreen();
                         break;
 
                         case 6:
-                            editdns_ip(PROFNumber, buff, true);
+                            editdns_ip(PROFNumber, &buff.connection[PROFNumber - 1], true);
                             brk = false;
                             ClearScreen();
                         break;
 
                         case 8:
-                            editwireless(PROFNumber, buff);
+                            editwireless(PROFNumber, &buff.connection[PROFNumber - 1]);
                             brk = false;
                             ClearScreen();
                         break;
