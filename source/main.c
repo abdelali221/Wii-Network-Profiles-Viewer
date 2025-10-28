@@ -76,7 +76,7 @@ int main() {
         printf("size : %d\n", filest.file_length);
     } else {
         if (stat == -4) {
-            printf("NOT FOUND!\n");
+            printf("NOT FOUND AT %s!\n", cfgpath);
             if (!strcmp(cfgpath, SM1PATH)) {
                 sprintf(cfgpath, POSTSM1PATH);
                 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
