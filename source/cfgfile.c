@@ -990,7 +990,59 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
 
                 case b_A:
                     if(Selection < 8) {
+                        switch (Selection)
+                        {
+                            case 0:
+                                if(buff.connection[PROFNumber - 1].flags & CONNECTION_SELECTED)
+                                  buff.connection[PROFNumber - 1].flags -= CONNECTION_SELECTED;
+                                else buff.connection[PROFNumber - 1].flags += CONNECTION_SELECTED;
+                            break;
+
+                            case 1:
+                                if(buff.connection[PROFNumber - 1].flags & USE_PMTU)
+                                  buff.connection[PROFNumber - 1].flags -= USE_PMTU;
+                                else buff.connection[PROFNumber - 1].flags += USE_PMTU;
+                            break;
+
+                            case 2:
+                                if(buff.connection[PROFNumber - 1].flags & TEST_PASSED)
+                                  buff.connection[PROFNumber - 1].flags -= TEST_PASSED;
+                                else buff.connection[PROFNumber - 1].flags += TEST_PASSED;
+                            break;
+
+                            case 3:
+                                if(buff.connection[PROFNumber - 1].flags & USE_PROXY)
+                                  buff.connection[PROFNumber - 1].flags -= USE_PROXY;
+                                else buff.connection[PROFNumber - 1].flags += USE_PROXY;
+                            break;
+
+                            case 4:
+                                if(buff.connection[PROFNumber - 1].flags & PPPOE)
+                                  buff.connection[PROFNumber - 1].flags -= PPPOE;
+                                else buff.connection[PROFNumber - 1].flags += PPPOE;
+                            break;
+
+                            case 5:
+                                if(buff.connection[PROFNumber - 1].flags & DNS)
+                                  buff.connection[PROFNumber - 1].flags -= DNS;
+                                else buff.connection[PROFNumber - 1].flags += DNS;
+                            break;
+
+                            case 6:
+                                if(buff.connection[PROFNumber - 1].flags & DHCP)
+                                  buff.connection[PROFNumber - 1].flags -= DHCP;
+                                else buff.connection[PROFNumber - 1].flags += DHCP;
+                            break;
+
+                            case 7:
+                                if(buff.connection[PROFNumber - 1].flags & INTERFACE)
+                                  buff.connection[PROFNumber - 1].flags -= INTERFACE;
+                                else buff.connection[PROFNumber - 1].flags += INTERFACE;
+                            break;
                         
+                        default:
+                            break;
+                        }
                         
                     }
                     brk = false;
