@@ -771,87 +771,52 @@ void editwireless(int PROFNumber, connection_t *profile) {
                     printf("\x1b[2K");
                     bool brk2 = true;
                     int idx = 0;
-                    switch (Selection) {
-                        case 0:
-                            idx = profile->ssid_length;
-                            POSCursor(27 + idx, 8);
-                            
-                            while (brk2) {
-                                static bool shift = false;
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(shift, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
+                    if (Selection < 2) {
+                        switch (Selection) {
+                            case 0:
+                                idx = profile->ssid_length;
+                                POSCursor(27 + idx, 8);
+                            break;
 
-                                switch (Input) {
-                                    case b_B:
-                                        if(shift) shift = false;
-                                        else shift = true;
-                                    break;
-
-                                    case HOME:
-                                        profile->ssid_length = idx;
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                            switch (chr)
-                                            {
-                                                case '\b':
-                                                    if (idx > 0) {
-                                                        printf("\b \b");
-                                                        idx--;
-                                                        profile->ssid[idx] = '\0';
-                                                    }
-                                                break;
-
-                                                default:
-                                                    putchar(chr);
-                                                    profile->ssid[idx] = chr;
-                                                    idx++;                                                    
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
+                            case 1:
+                                if(profile->encryption == 0x00) {
+                                    brk2 = false;
+                                    brk = false;
+                                } else {
+                                    idx = profile->key_length;
+                                    POSCursor(30 + idx, 10);
                                 }
-                            }
-                        break;
-
-                        case 1:
-                            if(profile->encryption != 0x00) {
-                                idx = profile->key_length;
-                                POSCursor(30 + idx, 10);
+                            break;
+                        }
                                 
-                                while (brk2) {
-                                    static bool shift = false;
-                                    static int conX, conY;
-                                    int Input = CheckWPAD(0);
-                                    WPADData* data = WPAD_Data(0);
-                                    int irX = (((data->ir.x) * 76) / 560);
-                                    int irY = (((data->ir.y) * 28) / 420);
-                                    CON_GetPosition(&conX, &conY);
-                                    char chr = keyboard(shift, irX, irY);
-                                    POSCursor(conX, conY);
-                                    VIDEO_WaitVSync();
+                        while (brk2) {
+                            static bool shift = false;
+                            static int conX, conY;
+                            int Input = CheckWPAD(0);
+                            WPADData* data = WPAD_Data(0);
+                            int irX = (((data->ir.x) * 76) / 560);
+                            int irY = (((data->ir.y) * 28) / 420);
+                            CON_GetPosition(&conX, &conY);
+                            char chr = keyboard(shift, irX, irY);
+                            POSCursor(conX, conY);
+                            VIDEO_WaitVSync();
 
-                                    switch (Input) {
-                                        case b_B:
-                                            if(shift) shift = false;
-                                            else shift = true;
+                            switch (Input) {
+                                case b_B:
+                                    if(shift) shift = false;
+                                    else shift = true;
+                                break;
+
+                                case HOME:
+                                    switch (Selection) {
+                                        case 0:
+                                            profile->ssid_length = idx;
+                                            ClearKeyboard();
+                                            brk2 = false;
+                                            brk = false;
                                         break;
 
-                                        case HOME:
+                                        case 1:
                                             if((profile->encryption > 0x03 && idx > 7) || (profile->encryption == 0x01 && idx == 5) || (profile->encryption == 0x02 && idx == 13)) {
                                                 profile->key_length = idx;
                                                 ClearKeyboard();
@@ -859,55 +824,69 @@ void editwireless(int PROFNumber, connection_t *profile) {
                                                 brk = false;
                                             }
                                         break;
+                                    }
+                                break;
 
-                                        case b_A:
-                                            if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                                switch (chr)
-                                                {
-                                                    case '\b':
-                                                        if (idx > 0) {
-                                                            printf("\b \b");
-                                                            idx--;
+                                case b_A:
+                                    if ((chr != '\0' && idx < 32) || chr == '\b') {
+                                        switch (chr)
+                                        {
+                                            case '\b':
+                                                if (idx > 0) {
+                                                    printf("\b \b");
+                                                    idx--;
+                                                    switch (Selection) {
+                                                        case 0:
+                                                            profile->ssid[idx] = '\0';
+                                                        break;
+
+                                                        case 1:
                                                             profile->key[idx] = '\0';
-                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            break;
+
+                                            default:
+                                                putchar(chr);
+                                                switch (Selection) {
+                                                    case 0:
+                                                        profile->ssid[idx] = chr;
                                                     break;
-                                                    
-                                                    default:
-                                                        putchar(chr);
+
+                                                    case 1:
                                                         profile->key[idx] = chr;
-                                                        idx++;                                                    
                                                     break;
                                                 }
-                                            }
-                                        break;
-                                    
-                                        default:
-                                        break;
+                                                idx++;                                                    
+                                            break;
+                                        }
                                     }
-                                }
+                                break;
+                            
+                                default:
+                                break;
                             }
-                        break;
-
-                        case 2:
-                            profile->encryption++;
-                            if (profile->encryption  == 3) profile->encryption = 4;
-                            if (profile->encryption  == 7) profile->encryption = 0;
-                            for (size_t i = 0; i < profile->key_length; i++) {
-                                profile->key[i] = '\0';
-                            }
-                            profile->key_length = '\0';
-                            brk2 = false;
-                            brk = false;
-                        break;
-
-                        default:
-                        break;
+                        }
+                    
+                    } else {
+                        profile->encryption++;
+                        if (profile->encryption  == 3) profile->encryption = 4;
+                        if (profile->encryption  == 7) profile->encryption = 0;
+                        for (size_t i = 0; i < profile->key_length; i++) {
+                            profile->key[i] = '\0';
+                        }
+                        profile->key_length = '\0';
+                        brk2 = false;
+                        brk = false;
                     }
+                
                 break;
             }
         }
-    }    
-}
+    }
+}    
+
 
 void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
     ClearScreen();
@@ -949,9 +928,9 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
 
         if (!(buff.connection[PROFNumber - 1].flags & INTERFACE)) {
 
-            printf("\nSSID : %s", buff.connection[PROFNumber - 1].ssid);
-            printf("\nPASSKEY : %s", buff.connection[PROFNumber - 1].key);
-            printf("\nENCRYPTION : %s", decodeencryption(buff.connection[PROFNumber - 1].encryption));
+            printf("\n   SSID : %s", buff.connection[PROFNumber - 1].ssid);
+            printf("\n   PASSKEY : %s", buff.connection[PROFNumber - 1].key);
+            printf("\n   ENCRYPTION : %s", decodeencryption(buff.connection[PROFNumber - 1].encryption));
         }
 
         POSCursor(0, 25);
@@ -962,7 +941,9 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
         int offset = 0;
 
         if (Selection > 3) {
-            offset += ((buff.connection[PROFNumber - 1].flags & USE_PROXY) * (2 + (buff.connection[PROFNumber - 1].proxy_settings.use_proxy_userandpass)));
+            offset += ((buff.connection[PROFNumber - 1].flags & USE_PROXY)) ? 2 : 0;
+
+            offset += ((buff.connection[PROFNumber - 1].proxy_settings.use_proxy_userandpass)) ? 2 : 0;
         }
         if (Selection > 5) {
             offset += (!(buff.connection[PROFNumber - 1].flags & DNS)) ? 2 : 0;
