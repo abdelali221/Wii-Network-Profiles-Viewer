@@ -68,7 +68,7 @@ void dumpfile(netconfig_t *buff, size_t length, const char *path) {
 void printprofiledetails(int PROFNumber, connection_t *profile) {
     if (PROFNumber > 0 && PROFNumber < 4) {
 
-        printf("<Connection %d %X>\n", PROFNumber, profile->flags);
+        printf("<Connection %d>\n", PROFNumber);
         printf("Connection Selected? %s\n", (profile->flags & CONNECTION_SELECTED) ? "Yes" : "No");
         printf("Use PMTU Recovery? %s\n", (profile->flags & USE_PMTU) ? "Yes" : "No");
         printf("Internet test passed? %s\n", (profile->flags & TEST_PASSED) ? "Yes" : "No");
@@ -893,7 +893,7 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
     bool stayinloop = true;
     while (stayinloop) {
         POSCursor(0, 0);
-        printf("<Connection %d %X>\n", PROFNumber, buff.connection[PROFNumber - 1].flags);
+        printf("<Connection %d>\n", PROFNumber);
         printf("   Connection Selected? %s\n", (buff.connection[PROFNumber - 1].flags & CONNECTION_SELECTED) ? "Yes" : "No");
         printf("   Use PMTU Recovery? %s\n", (buff.connection[PROFNumber - 1].flags & USE_PMTU) ? "Yes" : "No");
         printf("   Internet test passed? %s\n", (buff.connection[PROFNumber - 1].flags & TEST_PASSED) ? "Yes" : "No");
