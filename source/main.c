@@ -149,6 +149,9 @@ int main() {
                 }
                 net_deinit();
                 InputInit();
+                sleep(3);
+                ClearScreen();
+                printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
             break;
 
             case LEFT:

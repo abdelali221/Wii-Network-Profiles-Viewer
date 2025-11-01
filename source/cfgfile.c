@@ -111,10 +111,8 @@ void printprofiledetails(int PROFNumber, connection_t *profile) {
     POSCursor(0, 25);
     printf(" 1 : Dump config.dat\n");
     printf(" 2 : Edit current profile\n");
-    printf(" PLUS : Test connectivity");
+    printf(" PLUS : Test connectivity of the current configuration");
 }
-
-
 
 void editproxy(int PROFNumber, connection_t *profile) {
     if(profile->flags & 0x10) return;
