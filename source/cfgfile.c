@@ -108,9 +108,10 @@ void printprofiledetails(int PROFNumber, connection_t *profile) {
         }
     }
 
-    POSCursor(0, 26);
+    POSCursor(0, 25);
     printf(" 1 : Dump config.dat\n");
-    printf(" 2 : Edit current profile");
+    printf(" 2 : Edit current profile\n");
+    printf(" PLUS : Test connectivity");
 }
 
 
