@@ -34,7 +34,7 @@ int main() {
 
     VideoInit();
     InputInit();
-    printf("Wii Network Profiles Viewer %s\n Written By Abdelali221", VER);
+    printf("Wii Network Profiles Viewer %s\n Created By Abdelali221", VER);
     POSCursor(20, 10);
     printf("This software writes to the %sNAND!%s", RED_BG_WHITE_FG, DEFAULT_BG_FG);
     POSCursor(23, 12);
