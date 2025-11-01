@@ -5,6 +5,7 @@
 #include "virtualkb.h"
 #include "cfgfile.h"
 #include <fat.h>
+#include <network.h>
 
 #define VER "1.4"
 
@@ -32,9 +33,7 @@ int main() {
     int PROFNumber = 1;
 
     VideoInit();
-    WPAD_Init();
-    WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
-
+    InputInit();
     printf("Wii Network Profiles Viewer %s\n Written By Abdelali221", VER);
     POSCursor(20, 10);
     printf("This software writes to the %sNAND!%s", RED_BG_WHITE_FG, DEFAULT_BG_FG);
@@ -46,12 +45,6 @@ int main() {
     printf("Please check readme.md before using this software :\n\n");
     printf("       https://github.com/abdelali221/Wii-Network-Profiles-Viewer/");
 
-    while (1) {
-        int Input = CheckWPAD(0);
-        if (Input) {
-            break;
-        }
-    }
 
     ISFS_Initialize();
 
@@ -139,6 +132,23 @@ int main() {
                 dumpfile(&buff, sizeof(buff), "sd:/config.dat");
                 ClearScreen();
                 printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
+            break;
+
+            case PLUS:
+                ClearScreen();
+                WPAD_Shutdown();
+                printf("Reloading IOS...");
+                IOS_ReloadIOS(IOS_GetVersion());
+                printf("Done.\n");
+                sleep(2);
+                printf("Initializing Network...");
+                if(!net_init()) {
+                    printf("Success!");
+                } else {
+                    printf("failed");
+                }
+                net_deinit();
+                InputInit();
             break;
 
             case LEFT:
