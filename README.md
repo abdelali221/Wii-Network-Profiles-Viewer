@@ -3,7 +3,7 @@ Check your Wii's Network Profiles details!
 
 # How to use :
 
-This app can edit each profile (something that Wii Network Config Editor can't do, lol), let's see how every part works :
+This app can edit all three profiles (something that Wii Network Config Editor can't do, lol), let's see how every part work :
 
 When starting the app you should get this message :
 
@@ -67,7 +67,8 @@ The only different thing here is the security type, and here's what you should k
 When done changing settings, go back to the edit menu and press PLUS to save.
 
 
-If you encounter any issue, please create an issue post on the repository.
+If you encounter any issue, please create an issue post in the repository.
+
 
 
 
