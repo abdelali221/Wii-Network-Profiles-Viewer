@@ -1,6 +1,8 @@
 # Wii Network Config Viewer
 Check your Wii's Network Profiles details!
 
+![Github All Releases](https://img.shields.io/github/downloads/abdelali221/Wii-Network-Profiles-Viewer/total.svg?maxAge=2592000)
+
 # How to use :
 
 This app can edit all three profiles (something that Wii Network Config Editor can't do, lol), let's see how every part work :
