@@ -7,7 +7,7 @@
 #include <fat.h>
 #include <network.h>
 
-#define VER "1.4"
+#define VER "1.4.1"
 
 static fstats filest aligned;
 
@@ -54,7 +54,7 @@ int main() {
     if(pressed != PLUS) {
         exit(0);
     }
-    
+
     ISFS_Initialize();
 
     ClearScreen();
