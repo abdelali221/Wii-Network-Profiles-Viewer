@@ -45,14 +45,14 @@ int main() {
     printf("Please check readme.md before using this software :\n\n");
     printf("       https://github.com/abdelali221/Wii-Network-Profiles-Viewer/");
 
+    int pressed;
     while (1)
     {
-        int pressed = CheckWPAD(0);
-        if(pressed == PLUS) {
-            break;
-        } else {
-            exit(0);
-        }
+        pressed = CheckWPAD(0);
+        if(pressed) break;
+    }
+    if(pressed != PLUS) {
+        exit(0);
     }
     
     ISFS_Initialize();
