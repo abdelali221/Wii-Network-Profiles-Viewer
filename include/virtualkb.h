@@ -1,8 +1,6 @@
 #ifndef _VIRTUALKB_H_
 #define _VIRTUALKB_H_
 
-#define KEYBOARD_X 13
-
 typedef struct
 {
     uint8_t ROW;

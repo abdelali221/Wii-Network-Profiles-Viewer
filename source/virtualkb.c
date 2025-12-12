@@ -2,6 +2,9 @@
 #include "virtualkb.h"
 #include "Video.h"
 
+u8 KEYBOARD_X = 13;
+u8 KEYBOARD_Y = 15;
+
 virtualsymbol kbarray[48] = {
     {1, 0, 'a', 'A'},
     {3, 5, 'b', 'B'},
@@ -52,6 +55,11 @@ virtualsymbol kbarray[48] = {
     {1, 10, 94, 94},
 };
 
+void SetKBXandY(u8 x, u8 y) {
+    KEYBOARD_X = x;
+    KEYBOARD_Y = y;
+}
+
 void ClearKeyboard() {
     for (size_t i = 0; i < 13; i++)
     {
@@ -62,25 +70,25 @@ void ClearKeyboard() {
 
 char keyboard(bool shift, int irX, int irY) {
     char currChar = '\0';
-    POSCursor(KEYBOARD_X, 15);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y);
     printf(" _______________________________________________");
-    POSCursor(KEYBOARD_X, 16);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 1);
     printf("|   |   |   |   |   |   |   |   |   |   |   |   |");
-    POSCursor(KEYBOARD_X, 17);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 2);
     printf("|___|___|___|___|___|___|___|___|___|___|___|___|");
-    POSCursor(KEYBOARD_X, 18);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 3);
     printf("|   |   |   |   |   |   |   |   |   |   |   |   |");
-    POSCursor(KEYBOARD_X, 19);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 4);
     printf("|___|___|___|___|___|___|___|___|___|___|___|___|");
-    POSCursor(KEYBOARD_X, 20);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 5);
     printf("|   |   |   |   |   |   |   |   |   |   |   |   |");
-    POSCursor(KEYBOARD_X, 21);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 6);
     printf("|___|___|___|___|___|___|___|___|___|___|___|___|");
-    POSCursor(KEYBOARD_X, 22);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 7);
     printf("|   |   |   |   |   |   |   |   |   |   |   |");
-    POSCursor(KEYBOARD_X, 23);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 8);
     printf("|___|___|___|___|___|___|___|___|___|___|___|");
-    POSCursor(KEYBOARD_X, 24);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 9);
     if (irX > KEYBOARD_X && irX < KEYBOARD_X + 31 && irY > 20 && irY < 24) {
         printf("|             %sSpace%s             | Backspace |", WHITE_BG_BLACK_FG, DEFAULT_BG_FG);
         currChar = ' ';
@@ -90,11 +98,11 @@ char keyboard(bool shift, int irX, int irY) {
     } else {
         printf("|             Space             | Backspace |");
     }
-    POSCursor(KEYBOARD_X, 25);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 10);
     printf("|_______________________________|___________|");
     for (size_t i = 0; i < 47; i++) {
         POSCursor(KEYBOARD_X + 2 + kbarray[i].COL * 4, 16 + kbarray[i].ROW * 2);
-        if ((irX > (KEYBOARD_X + 2 + kbarray[i].COL * 4) - 3 && irX < (KEYBOARD_X + 2 + kbarray[i].COL * 4) + 2) && (irY >= 13 + kbarray[i].ROW * 2) && (irY <= 14 + kbarray[i].ROW * 2)) {
+        if ((irX > (KEYBOARD_X + 2 + kbarray[i].COL * 4) - 3 && irX < (KEYBOARD_X + 2 + kbarray[i].COL * 4) + 2) && (irY >= KEYBOARD_Y - 2 + kbarray[i].ROW * 2) && (irY <= KEYBOARD_Y - 1 + kbarray[i].ROW * 2)) {
             printf("%s", WHITE_BG_BLACK_FG);
             if (shift) {
                 currChar = kbarray[i].high_chr;
@@ -109,7 +117,7 @@ char keyboard(bool shift, int irX, int irY) {
         }
         printf("%s", DEFAULT_BG_FG);
     }
-    POSCursor(KEYBOARD_X, 26);
+    POSCursor(KEYBOARD_X, KEYBOARD_Y + 11);
     printf("B : Shift");
     if (currChar == '\0') printf(" / Please aim at the keyboard with your WiiMote");
     else printf("%*c", 48, ' ');
