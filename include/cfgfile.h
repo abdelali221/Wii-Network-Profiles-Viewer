@@ -77,8 +77,8 @@ typedef struct _netconfig
 // Flags :
 
 #define INTERFACE 1
-#define DNS 2
-#define DHCP 4
+#define DHCP 2
+#define DNS 4
 #define PPPOE 8
 #define USE_PROXY 16
 #define TEST_PASSED 32
