@@ -10,6 +10,7 @@ typedef struct
 } virtualsymbol;
 
 void ClearKeyboard();
+char numpad(int irX, int irY);
 char keyboard(bool shift, int irX, int irY);
 
 #endif

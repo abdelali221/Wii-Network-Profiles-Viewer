@@ -7,7 +7,7 @@
 #include <fat.h>
 #include <network.h>
 
-#define VER "1.4.2"
+#define VER "1.5"
 
 static fstats filest aligned;
 

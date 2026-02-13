@@ -3,8 +3,10 @@
 #include "Video.h"
 #include <fat.h>
 #include <math.h>
+#include <ogc/wd.h>
 #include "Input.h"
 #include "virtualkb.h"
+#include "TUI.h"
 
 char *decodeencryption(char byte) {
     switch (byte) {
@@ -120,33 +122,34 @@ void editproxy(int PROFNumber, connection_t *profile) {
     while (1) {
         ClearScreen();
 
-        POSCursor(30, 4);
+        POSCursor(30, 2);
         printf("Proxy Settings :");
 
-        POSCursor(20, 6);
+        POSCursor(20, 4);
         printf("Proxy Server : %s", profile->proxy_settings.proxy_name);
 
 
-        POSCursor(20, 8);
+        POSCursor(20, 6);
         printf("Port : %d", profile->proxy_settings.proxy_port);
 
-        POSCursor(20, 10);
+        POSCursor(20, 8);
         printf("Needs Username/Password? %s", profile->proxy_settings.use_proxy_userandpass ? "Yes" : "No");
 
-        POSCursor(20, 12);
+        POSCursor(20, 10);
         printf("Username : %s", profile->proxy_settings.proxy_username);
 
-        POSCursor(20, 14);
+        POSCursor(20, 12);
         printf("Password : %s", profile->proxy_settings.proxy_password);
 
-        POSCursor(0, 26);
+        POSCursor(0, 25);
         printf("A : Edit\n");
         printf("HOME : Go back\n");
         
-        POSCursor(18, 6 + (Selection * 2));
+        POSCursor(18, 4 + (Selection * 2));
         printf("->");
         
         bool brk = true;
+        u8 idx = 0;
 
         while (brk) {
             int Input = CheckWPAD(0);
@@ -154,160 +157,45 @@ void editproxy(int PROFNumber, connection_t *profile) {
             switch (Input) {
 
                 case HOME:
-                    if(profile->flags & 0x10) return;
-                    
-                    if(strlen((char*)profile->proxy_settings.proxy_name) > 0 && profile->proxy_settings.proxy_port > 0  && (strlen((char*)profile->proxy_settings.proxy_username) > 0 || !profile->proxy_settings.use_proxy_userandpass)) {
-                        return;
-                    }
-                    POSCursor(14, 16);
-                    if (strlen((char*)profile->proxy_settings.proxy_name) == 0) {
-                        printf("Please specify a proxy name");
-                    }
-                    POSCursor(14, 17);
-                    if (strlen((char*)profile->proxy_settings.proxy_username) == 0 && profile->proxy_settings.use_proxy_userandpass) {
-                        printf("Please specify a proxy username");
-                    }
-                    POSCursor(14, 18);
-                    if (profile->proxy_settings.proxy_port == 0) {
-                        printf("Port can't be 0");
-                    }
+                    return;
                 break;
 
                 case DOWN:
                     if(Selection < 4) {
-                        POSCursor(18, 6 + (Selection * 2));
+                        POSCursor(18, 4 + (Selection * 2));
                         printf("  ");
                         Selection++;
-                        POSCursor(18, 6 + (Selection * 2));
+                        POSCursor(18, 4 + (Selection * 2));
                         printf("->");
                     }
                 break;
 
                 case UP:
                     if (Selection > 0) {
-                        POSCursor(18, 6 + (Selection * 2));
+                        POSCursor(18, 4 + (Selection * 2));
                         printf("  ");
                         Selection--;
-                        POSCursor(18, 6 + (Selection * 2));
+                        POSCursor(18, 4 + (Selection * 2));
                         printf("->");
                     }
                 break;
 
                 case b_A:
-                    POSCursor(0, 26);
+                    POSCursor(0, 25);
                     printf("\x1b[2K");
-                    bool brk2 = true;
-                    int idx = 0;
                     switch (Selection) {
                         case 0:
                             idx = strlen((char*)profile->proxy_settings.proxy_name);
-                            POSCursor(35 + idx, 6);
-                            
-                            while (brk2) {
-                                static bool shift = false;
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(shift, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-                                    case b_B:
-                                        if(shift) shift = false;
-                                        else shift = true;
-                                    break;
-
-                                    case HOME:
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                            switch (chr)
-                                            {
-                                                case '\b':
-                                                    if (idx > 0) {
-                                                        printf("\b \b");
-                                                        idx--;
-                                                        profile->proxy_settings.proxy_name[idx] = '\0';
-                                                        profile->proxy_settings_copy.proxy_name[idx] = '\0';
-                                                    }
-                                                case ' ':
-                                                break;
-                                            
-                                                default:
-                                                    putchar(chr);
-                                                    profile->proxy_settings.proxy_name[idx] = chr;
-                                                    profile->proxy_settings_copy.proxy_name[idx] = chr;
-                                                    idx++;                                                    
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            POSCursor(35 + idx, 4);
+                            ReadString(profile->proxy_settings.proxy_name, &idx, 32);
+                            brk = false;
                         break;
 
                         case 1:
-                            POSCursor(27, 8);
-                            printf("     \b\b\b\b\b");
-                            u16 proxy = 0;                            
-                            while (brk2) {                                
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(true, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-
-                                    case HOME:
-                                        profile->proxy_settings.proxy_port = proxy;
-                                        profile->proxy_settings_copy.proxy_port = proxy;
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && chr >= '0' && chr <= '9') || chr == '\b') {
-                                            switch (chr) {
-                                                case '\b':
-                                                    if (idx > 0) {
-                                                        printf("\b \b");
-                                                        proxy /= 10;
-                                                    }
-                                                break;
-
-                                                default:
-                                                    if((proxy * 10) + chr - 48 <= 34463 && idx < 5){
-                                                        putchar(chr);
-                                                        proxy *= 10;
-                                                        proxy += chr - 48;
-                                                        idx++;
-                                                    }                              
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            POSCursor(27, 6);
+                            printf("     \b\b\b\b\b"); 
+                            profile->proxy_settings.proxy_port = ReadNumString(65535);
+                            brk = false;
                         break;
 
                         case 2:
@@ -319,125 +207,21 @@ void editproxy(int PROFNumber, connection_t *profile) {
                                 profile->proxy_settings.use_proxy_userandpass = 1;
                                 profile->proxy_settings_copy.use_proxy_userandpass = 1;
                             }
-
-                            brk2 = false;
                             brk = false;
                         break;
 
                         case 3:
                             idx = strlen((char*)profile->proxy_settings.proxy_username);
-                            POSCursor(31 + idx, 12);
-                            
-                            while (brk2) {
-                                static bool shift = false;
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(shift, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-                                    case b_B:
-                                        if(shift) shift = false;
-                                        else shift = true;
-                                    break;
-
-                                    case HOME:
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                            switch (chr)
-                                            {
-                                                case '\b':
-                                                    if (idx > 0) {
-                                                        printf("\b \b");
-                                                        idx--;
-                                                        profile->proxy_settings.proxy_username[idx] = '\0';
-                                                        profile->proxy_settings_copy.proxy_username[idx] = '\0';
-                                                    }
-                                                case ' ':
-                                                break;
-                                            
-                                                default:
-                                                    putchar(chr);
-                                                    profile->proxy_settings.proxy_username[idx] = chr;
-                                                    profile->proxy_settings_copy.proxy_username[idx] = chr;
-                                                    idx++;                                                    
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            POSCursor(31 + idx, 10);
+                            ReadString(profile->proxy_settings.proxy_username, &idx, 32);
+                            brk = false;
                         break;
 
                         case 4:
                             idx = strlen((char*)profile->proxy_settings.proxy_password);
-                            POSCursor(31 + idx, 14);
-                            
-                            while (brk2) {
-                                static bool shift = false;
-                                static int conX, conY;
-                                int Input = CheckWPAD(0);
-                                WPADData* data = WPAD_Data(0);
-                                int irX = (((data->ir.x) * 76) / 560);
-                                int irY = (((data->ir.y) * 28) / 420);
-                                CON_GetPosition(&conX, &conY);
-                                char chr = keyboard(shift, irX, irY);
-                                POSCursor(conX, conY);
-                                VIDEO_WaitVSync();
-
-                                switch (Input) {
-                                    case b_B:
-                                        if(shift) shift = false;
-                                        else shift = true;
-                                    break;
-
-                                    case HOME:
-                                        ClearKeyboard();
-                                        brk2 = false;
-                                        brk = false;
-                                    break;
-
-                                    case b_A:
-                                        if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                            switch (chr)
-                                            {
-                                                case '\b':
-                                                    if (idx > 0) {
-                                                        printf("\b \b");
-                                                        idx--;
-                                                        profile->proxy_settings.proxy_password[idx] = '\0';
-                                                        profile->proxy_settings_copy.proxy_password[idx] = '\0';
-                                                    }
-                                                case ' ':
-                                                break;
-                                            
-                                                default:
-                                                    putchar(chr);
-                                                    profile->proxy_settings.proxy_password[idx] = chr;
-                                                    profile->proxy_settings_copy.proxy_password[idx] = chr;
-                                                    idx++;                                                    
-                                                break;
-                                            }
-                                        }
-                                    break;
-                                
-                                    default:
-                                    break;
-                                }
-                            }
+                            POSCursor(31 + idx, 12);
+                            ReadString(profile->proxy_settings.proxy_password, &idx, 32);
+                            brk = false;
                         break;
                     
                         default:
@@ -480,14 +264,12 @@ void editdns_ip(int PROFNumber, connection_t *profile, bool dns_ip) {
             printf("Router IP : %d.%d.%d.%d", profile->gateway[0], profile->gateway[1], profile->gateway[2], profile->gateway[3]);
         }
 
-        POSCursor(0, 26);
+        POSCursor(0, 25);
         printf("A : Edit\n");
         printf("HOME : Go back\n");
 
         POSCursor(18, 8 + (Selection * 2));
         printf("->");
-        u16 valbuff[4] = {0};
-        
         bool brk = true;
         
         while (brk) {
@@ -520,180 +302,38 @@ void editdns_ip(int PROFNumber, connection_t *profile, bool dns_ip) {
                 break;
 
                 case b_A:
-                    POSCursor(0, 26);
-                    printf("\x1b[2K");
-                    bool brk2 = true;
-                    int idx = 0;
-                    int i = 0; 
                     switch (Selection)
                     {
                         case 0:
-                            if(dns_ip) POSCursor(33, 8);
-                            else POSCursor(34, 8);
+                            if(dns_ip) {
+                                POSCursor(33, 8);
+                                ReadDNS_IP(profile->ip);
+                            } else {
+                                POSCursor(34, 8);
+                                ReadDNS_IP(profile->dns1);
+                            }
+        
                         break;
 
                         case 1:
-                            if(dns_ip) POSCursor(34, 10);
-                            else POSCursor(36, 10);
+                            if(dns_ip) {
+                                POSCursor(34, 10);
+                                ReadDNS_IP(profile->netmask);
+                            } else {
+                                POSCursor(36, 10);
+                                ReadDNS_IP(profile->dns2);
+                            }
                         break;
 
                         case 2:
                             POSCursor(32, 12);
+                            ReadDNS_IP(profile->gateway);
                         break;
                     
                         default:
                         break;
                     }
-                    
-                    printf("%s%d%s.%d.%d.%d        ", WHITE_BG_BLACK_FG, valbuff[0], DEFAULT_BG_FG, valbuff[1], valbuff[2], valbuff[3]);
-                    brk2 = true;                    
-                    while (brk2) {                                
-                        static int conX, conY;
-                        int Input = CheckWPAD(0);
-                        WPADData* data = WPAD_Data(0);
-                        int irX = (((data->ir.x) * 76) / 560);
-                        int irY = (((data->ir.y) * 28) / 420);
-                        CON_GetPosition(&conX, &conY);
-                        char chr = keyboard(true, irX, irY);
-                        POSCursor(conX, conY);
-                        VIDEO_WaitVSync();
-
-                        switch (Input) {
-
-                            case HOME:
-                                for (size_t i = 0; i < 4; i++)
-                                {
-                                    if (dns_ip) {
-                                        profile->ip[i] = valbuff[i];
-                                    } else {
-                                       profile->dns1[i] = valbuff[i];
-                                    }
-                                }
-                                ClearKeyboard();
-                                brk2 = false;
-                                brk = false;
-                            break;
-
-                            case b_A:
-                                if ((chr != '\0' && chr >= '0' && chr <= '9') || chr == '\b') {
-                                    switch (chr) {
-                                        case '\b':
-                                            valbuff[idx] /= 10;
-                                            switch (Selection)
-                                            {
-                                                case 0:
-                                                    if(dns_ip) POSCursor(33, 8);
-                                                    else POSCursor(34, 8);
-                                                break;
-
-                                                case 1:
-                                                    if(dns_ip) POSCursor(34, 10);
-                                                    else POSCursor(36, 10);
-                                                break;
-
-                                                case 2:
-                                                    POSCursor(32, 12);
-                                                break;
-                                            
-                                                default:
-                                                break;
-                                            }
-                                            switch (idx)
-                                            {
-                                                case 0:
-                                                    printf("%s%d%s.%d.%d.%d        ", WHITE_BG_BLACK_FG, valbuff[0], DEFAULT_BG_FG, valbuff[1], valbuff[2], valbuff[3]);
-                                                break;
-
-                                                case 1:
-                                                    printf("%d.%s%d%s.%d.%d        ", valbuff[0], WHITE_BG_BLACK_FG, valbuff[1], DEFAULT_BG_FG, valbuff[2], valbuff[3]);
-                                                break;
-                                                
-                                                case 2:
-                                                    printf("%d.%d.%s%d%s.%d        ", valbuff[0], valbuff[1], WHITE_BG_BLACK_FG, valbuff[2], DEFAULT_BG_FG, valbuff[3]);
-                                                break;
-
-                                                case 3:
-                                                    printf("%d.%d.%d.%s%d%s        ", valbuff[0], valbuff[1], valbuff[2], WHITE_BG_BLACK_FG, valbuff[3], DEFAULT_BG_FG);
-                                                break;
-                                            
-                                                default:
-                                                break;
-                                            }
-                                            if (i > 0) i--;
-                                        break;
-
-                                        default:
-                                            if((((valbuff[idx] * 10) + chr - 48) <= 255) && idx < 4){
-                                                valbuff[idx] *= 10;
-                                                valbuff[idx] += chr - 48;
-                                                switch (Selection)
-                                                {
-                                                    case 0:
-                                                        if(dns_ip) POSCursor(33, 8);
-                                                        else POSCursor(34, 8);
-                                                    break;
-
-                                                    case 1:
-                                                        if(dns_ip) POSCursor(34, 10);
-                                                        else POSCursor(36, 10);
-                                                    break;
-
-                                                    case 2:
-                                                        POSCursor(32, 12);
-                                                    break;
-                                                
-                                                    default:
-                                                    break;
-                                                }
-                                                if (i == 2) {
-                                                    idx++;
-                                                    if (idx == 4) {
-                                                        for (size_t i = 0; i < 4; i++)
-                                                        {
-                                                            if (dns_ip) {
-                                                                profile->ip[i] = valbuff[i];
-                                                            } else {
-                                                                profile->dns1[i] = valbuff[i];
-                                                            }
-                                                        }
-                                                        ClearKeyboard();
-                                                        brk2 = false;
-                                                        brk = false;
-                                                    }
-                                                    i = -1;
-                                                }
-                                                switch (idx)
-                                                {
-                                                    case 0:
-                                                        printf("%s%d%s.%d.%d.%d        ", WHITE_BG_BLACK_FG, valbuff[0], DEFAULT_BG_FG, valbuff[1], valbuff[2], valbuff[3]);
-                                                    break;
-
-                                                    case 1:
-                                                        printf("%d.%s%d%s.%d.%d        ", valbuff[0], WHITE_BG_BLACK_FG, valbuff[1], DEFAULT_BG_FG, valbuff[2], valbuff[3]);
-                                                    break;
-                                                    
-                                                    case 2:
-                                                        printf("%d.%d.%s%d%s.%d        ", valbuff[0], valbuff[1], WHITE_BG_BLACK_FG, valbuff[2], DEFAULT_BG_FG, valbuff[3]);
-                                                    break;
-
-                                                    case 3:
-                                                        printf("%d.%d.%d.%s%d%s        ", valbuff[0], valbuff[1], valbuff[2], WHITE_BG_BLACK_FG, valbuff[3], DEFAULT_BG_FG);
-                                                    break;
-                                                
-                                                    default:
-                                                    break;
-                                                }
-                                                i++;
-                                            }
-                                        break;
-                                    }
-                                }
-                            break;
-                        
-                            default:
-                            break;
-                        }
-                    }
+                    brk = false;
                 break;
 
             }
@@ -718,7 +358,7 @@ void editwireless(int PROFNumber, connection_t *profile) {
         POSCursor(20, 12);
         printf("ENCRYPTION : %s",decodeencryption(profile->encryption));
 
-        POSCursor(0, 26);
+        POSCursor(0, 25);
         printf("A : Edit\n");
         printf("HOME : Go back\n");
 
@@ -733,15 +373,6 @@ void editwireless(int PROFNumber, connection_t *profile) {
             switch (Input) {
 
                 case HOME:
-                    POSCursor(14, 16);
-                    if (profile->key_length == 0 && profile->encryption != OPEN) {
-                        printf("Passkey can't be NULL!\n");
-                        break;
-                    }
-                    if (profile->ssid_length == 0) {
-                        printf("Please specify an SSID");
-                        break;
-                    }
                     return;
                 break;
 
@@ -766,108 +397,30 @@ void editwireless(int PROFNumber, connection_t *profile) {
                 break;
 
                 case b_A:
-                    POSCursor(0, 26);
+                    POSCursor(0, 25);
                     printf("\x1b[2K");
-                    bool brk2 = true;
                     int idx = 0;
                     if (Selection < 2) {
                         switch (Selection) {
                             case 0:
                                 idx = profile->ssid_length;
                                 POSCursor(27 + idx, 8);
+                                ReadString(profile->ssid, &profile->ssid_length, 32);
                             break;
 
                             case 1:
                                 if(profile->encryption == 0x00) {
-                                    brk2 = false;
                                     brk = false;
                                 } else {
                                     idx = profile->key_length;
                                     POSCursor(30 + idx, 10);
+                                    ReadString(profile->key, &profile->key_length, 64);
                                 }
                             break;
                         }
-                                
-                        while (brk2) {
-                            static bool shift = false;
-                            static int conX, conY;
-                            int Input = CheckWPAD(0);
-                            WPADData* data = WPAD_Data(0);
-                            int irX = (((data->ir.x) * 76) / 560);
-                            int irY = (((data->ir.y) * 28) / 420);
-                            CON_GetPosition(&conX, &conY);
-                            char chr = keyboard(shift, irX, irY);
-                            POSCursor(conX, conY);
-                            VIDEO_WaitVSync();
-
-                            switch (Input) {
-                                case b_B:
-                                    if(shift) shift = false;
-                                    else shift = true;
-                                break;
-
-                                case HOME:
-                                    switch (Selection) {
-                                        case 0:
-                                            profile->ssid_length = idx;
-                                            ClearKeyboard();
-                                            brk2 = false;
-                                            brk = false;
-                                        break;
-
-                                        case 1:
-                                            if((profile->encryption > 0x03 && idx > 7) || (profile->encryption == 0x01 && idx == 5) || (profile->encryption == 0x02 && idx == 13)) {
-                                                profile->key_length = idx;
-                                                ClearKeyboard();
-                                                brk2 = false;
-                                                brk = false;
-                                            }
-                                        break;
-                                    }
-                                break;
-
-                                case b_A:
-                                    if ((chr != '\0' && idx < 32) || chr == '\b') {
-                                        switch (chr)
-                                        {
-                                            case '\b':
-                                                if (idx > 0) {
-                                                    printf("\b \b");
-                                                    idx--;
-                                                    switch (Selection) {
-                                                        case 0:
-                                                            profile->ssid[idx] = '\0';
-                                                        break;
-
-                                                        case 1:
-                                                            profile->key[idx] = '\0';
-                                                        break;
-                                                    }
-                                                }
-                                            break;
-
-                                            default:
-                                                putchar(chr);
-                                                switch (Selection) {
-                                                    case 0:
-                                                        profile->ssid[idx] = chr;
-                                                    break;
-
-                                                    case 1:
-                                                        profile->key[idx] = chr;
-                                                    break;
-                                                }
-                                                idx++;                                                    
-                                            break;
-                                        }
-                                    }
-                                break;
-                            
-                                default:
-                                break;
-                            }
-                        }
-                    
+                        POSCursor(0, 25);
+                        printf("A : Edit\n");
+                        printf("HOME : Go back\n");               
                     } else {
                         profile->encryption++;
                         if (profile->encryption  == 3) profile->encryption = 4;
@@ -876,7 +429,6 @@ void editwireless(int PROFNumber, connection_t *profile) {
                             profile->key[i] = '\0';
                         }
                         profile->key_length = '\0';
-                        brk2 = false;
                         brk = false;
                     }
                 
@@ -884,8 +436,238 @@ void editwireless(int PROFNumber, connection_t *profile) {
             }
         }
     }
-}    
+}
 
+BSSDescriptor* ParseScanBuff(u8 *ScanBuff, u8 X, u8 Y, u8 AP) {
+    u16 APs = ScanBuff[0] << 8 | ScanBuff[1];
+    BSSDescriptor* ptr = (BSSDescriptor*)((u32)ScanBuff + 2);
+    BSSDescriptor* ret = (BSSDescriptor*)((u32)ScanBuff + 2);;
+
+    POSCursor((X/2) - 5, 9);
+    if(APs) {
+        printf("Found %d APs", APs);
+    } else {
+        printf("No APs were found.");
+    }
+
+    POSCursor(X/4 - 4, 11);
+    printtabletop();
+    size_t i = 0;
+    
+    for (; i < APs; i++)
+    {
+        POSCursor(X/4 - 4, 12 + i);
+        putchar(186);
+
+        switch(WD_GetRadioLevel(ptr)) {
+            case WD_SIGNAL_STRONG:
+                printf("[###]");
+            break;
+
+            case WD_SIGNAL_NORMAL:
+                printf("[## ]");
+            break;
+
+            case WD_SIGNAL_FAIR:
+                printf("[#  ]");
+            break;
+
+            case WD_SIGNAL_WEAK:
+                printf("[   ]");
+            break;
+        }
+
+        putchar(186);
+
+        POSCursor(X/4 + 1 + 16 - (ptr->SSIDLength / 2), 12 + i);
+        if(i == AP) {
+            ret = ptr;
+            printf("%s%s%s%s%s", CONSOLE_BLACK, CONSOLE_BG_WHITE, ptr->SSID, CONSOLE_WHITE, CONSOLE_BG_BLACK);
+        } else {
+            printf("%s", ptr->SSID);
+        }
+
+        POSCursor(X/4 + 35, 12 + i);
+        putchar(186);
+
+        u8 Security = WD_GetSecurity(ptr);
+        
+        if(Security & WD_WPA2_AES) {
+            printf(" WPA2-AES");
+        } else if(Security & WD_WPA_AES) {
+            printf("  WPA-AES");
+        } else if(Security & WD_WPA_TKIP) {
+            printf(" WPA-TKIP");
+        } else if(Security & WD_WEP) {
+            printf("   WEP");
+        } else if(Security == 0) {
+            printf("   Open");
+        } else {
+            printf(" Unknown");
+        }
+  
+        if (ptr->length == 0) {
+            if((ptr->IEs_length + 0x3E) % 2 == 0) {
+                ptr = (BSSDescriptor*)((u32)ptr + ptr->IEs_length + 0x3E);
+            } else {
+                ptr = (BSSDescriptor*)((u32)ptr + ptr->IEs_length + 0x3F);
+            }            
+        } else {
+            ptr = (BSSDescriptor*)((u32)ptr + ptr->length*2);
+        }
+        POSCursor(X/4 + 46, 12 + i);
+        putchar(186);
+    }
+    
+    POSCursor(X/4 - 4, 12 + i);
+    printtablebottom();
+
+    return ret;
+}
+
+void ScanWiFi(int PROFNumber, connection_t *profile) {
+    ScanParameters set;
+    WD_SetDefaultScanParameters(&set);
+
+    WDInfo inf;
+    WD_GetInfo(&inf);
+
+    set.ChannelBitmap = inf.EnableChannelsMask;
+
+    ClearScreen();
+    int X = 0, Y = 0;
+    CON_GetMetrics(&X, &Y);
+    POSCursor((X/2) - 8, 2);
+    printf("WiFi Scan Wizard");
+
+    POSCursor((X/2) - 16, 7);
+    printf("Scanning for WiFi networks nearby...");
+
+    u8 ScanBuff[4096];
+    WD_ScanOnce(&set, ScanBuff, sizeof(ScanBuff));
+    u16 APs = ScanBuff[0] << 8 | ScanBuff[1];
+
+    POSCursor(0, 25);
+    printf(" B : Go back");
+    printf("\n A : Select AP");
+
+    int AP = 0;
+    BSSDescriptor* ptr = ParseScanBuff(ScanBuff, X, Y, AP);
+
+    while (1) {
+        int Input = CheckWPAD(0);
+        switch(Input) {
+            case UP:
+                if(AP > 0) {
+                    AP--;
+                    ptr = ParseScanBuff(ScanBuff, X, Y, AP);
+                }
+            break;
+
+            case DOWN:
+                if(AP < APs - 1) {
+                    AP++;
+                    ptr = ParseScanBuff(ScanBuff, X, Y, AP);
+                }
+            break;
+
+            case TWO:
+
+                ClearScreen();
+                POSCursor((X/2) - 8, 2);
+                printf("WiFi Scan Wizard");
+
+                POSCursor((X/2) - 16, 7);
+                printf("Scanning for WiFi networks nearby...");
+
+                WD_ScanOnce(&set, ScanBuff, sizeof(ScanBuff));
+                APs = ScanBuff[0] << 8 | ScanBuff[1];
+                AP = 0;
+                ptr = ParseScanBuff(ScanBuff, X, Y, AP);
+                POSCursor(0, 25);
+                printf(" B : Go back");
+                printf("\n A : Select AP");
+            break;
+
+            case b_A:
+                u8 Security = WD_GetSecurity(ptr);
+
+                if(Security & WD_WPA2_AES || Security & WD_WPA_AES || Security & WD_WPA_TKIP || Security & WD_WEP) {
+                    ClearScreen();
+                    POSCursor((X/2) - 8, 2);
+                    printf("WiFi Scan Wizard");
+
+                    POSCursor(0, 26);
+                    printf(" Home : Save");
+
+                    POSCursor((X/2) - 15, 7);
+                    printf("Please enter the password : ");
+                    u8 keybuff[64];
+                    memset(keybuff, 0, 64);
+                    u8 keylen = 0;
+                    bool brk = 0;
+                    while(!brk) {
+                        POSCursor((X/2) + 1, 8);
+                        printf("-> ");
+                        ReadString(keybuff, &keylen, 64);
+                        if(Security & WD_WPA2_AES) {
+                            if(keylen < 8) {
+                                POSCursor((X/2) - 9, 11);
+                                printf(" Password is invalid!");
+                            } else {
+                                profile->encryption = WPA2_PSK_AES;
+                                brk = 1;
+                            }
+                        } else if (Security & WD_WPA_AES) {
+                            if(keylen < 8) {
+                                POSCursor((X/2) - 9, 11);
+                                printf(" Password is invalid!");
+                            } else {
+                                profile->encryption = WPA_PSK_AES;
+                                brk = 1;
+                            }
+                        } else if (Security & WD_WPA_TKIP) {
+                            if(keylen < 8) {
+                                POSCursor((X/2) - 9, 11);
+                                printf(" Password is invalid!");
+                            } else {
+                                profile->encryption = WPA_PSK_TKIP;
+                                brk = 1;
+                            }
+                        } else if (Security & WD_WEP) {
+                            if(profile->key_length == 5) {
+                                profile->encryption = WEP64;
+                                brk = 1;
+                            } else if(profile->key_length == 13) {
+                                profile->encryption = WEP128;
+                                brk = 1;
+                            } else {
+                                POSCursor((X/2) - 9, 11);
+                                printf(" Password is invalid!");
+                            }
+                        }
+                        sleep(1);
+                    }
+                    strcpy((char*)profile->ssid, (char*)ptr->SSID);
+                    profile->ssid_length = ptr->SSIDLength;
+                    memset(profile->key, 0, 64);
+                    strcpy((char*)profile->key,(char*)keybuff);
+                    profile->key_length = keylen;
+                } else if(Security == 0) {
+                    strcpy((char*)profile->ssid, (char*)ptr->SSID);
+                    memset(profile->key, 0, 64);
+                    profile->ssid_length = ptr->SSIDLength;
+                    profile->encryption = WD_OPEN;
+                }
+                return;
+            break;
+
+            case b_B:
+                return;
+            break;
+        }
+    }
+}
 
 void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
     ClearScreen();
@@ -932,17 +714,27 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
             printf("\n   ENCRYPTION : %s", decodeencryption(buff.connection[PROFNumber - 1].encryption));
         }
 
-        POSCursor(0, 25);
+        if(!(buff.connection[PROFNumber - 1].flags & INTERFACE)) {
+            POSCursor(0, 23);
+        } else {
+            POSCursor(0, 24);
+        }
+        
         printf(" B : Go back without saving\n");
         printf(" PLUS : Go to submenu (Cursor needs to be : +>)\n");
+        printf(" MINUS : Clear Profile\n");
         printf(" 1 : Save and go back");
+        if(!(buff.connection[PROFNumber - 1].flags & INTERFACE)) {
+            printf("\n 2 : Scan for AP");
+        }
 
         int offset = 0;
 
         if (Selection > 3) {
             offset += ((buff.connection[PROFNumber - 1].flags & USE_PROXY)) ? 2 : 0;
-
-            offset += ((buff.connection[PROFNumber - 1].proxy_settings.use_proxy_userandpass)) ? 2 : 0;
+            if(buff.connection[PROFNumber - 1].flags & USE_PROXY) {
+                offset += ((buff.connection[PROFNumber - 1].proxy_settings.use_proxy_userandpass)) ? 2 : 0;
+            }
         }
         if (Selection > 5) {
             offset += (!(buff.connection[PROFNumber - 1].flags & DNS)) ? 2 : 0;
@@ -1134,6 +926,18 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
                         default:
                         break;
                     }
+                break;
+
+                case MINUS:
+                    memset(&buff.connection[PROFNumber - 1], 0, sizeof(connection_t));
+                    brk = false;
+                    ClearScreen();
+                break;
+
+                case TWO:
+                    ScanWiFi(PROFNumber, &buff.connection[PROFNumber - 1]);
+                    brk = false;
+                    ClearScreen();
                 break;
             
                 default:
