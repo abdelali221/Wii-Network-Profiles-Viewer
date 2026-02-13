@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <app version="1">
 	<name>WNPV</name>
-	<version>1.4.2</version>
-	<release_date>2026012300000</release_date>
+	<version>1.5 (Pre-Release)</version>
+	<release_date>2026021300000</release_date>
 	<coder>Abdelali221</coder>
 	<short_description>Network Profiles Viewer!</short_description>
 	<long_description>Wii Network Profiles Viewer!
 
 This app lets you check the properties of every profile (Such as the SSID, the Passkey, etc...) and edit them.
 
-Make sure to read https://github.com/abdelali221/Wii-Network-Profiles-Viewer/blob/main/README.md before using the app.
+Make sure to read https://abdelali221.github.io/guides/WNPV.html before using the app.
 </long_description>
 </app>
