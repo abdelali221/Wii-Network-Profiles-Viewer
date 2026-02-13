@@ -42,8 +42,9 @@ int main() {
     POSCursor(16, 20);
     printf(" Press anything but + if you want to exit...");
     POSCursor(12, 24);
-    printf("Please check readme.md before using this software :\n\n");
-    printf("       https://github.com/abdelali221/Wii-Network-Profiles-Viewer/");
+    printf("Please check readme.md before using this software :");
+    POSCursor(15, 26);
+    printf("https://abdelali221.github.io/guides/WNPV.html");
 
     int pressed;
     while (1)
