@@ -163,7 +163,7 @@ char keyboard(bool shift, int irX, int irY) {
             putchar(HOR_BAR);
         }
     }
-    putchar(RIGHT_BOTTOM_CORNER);
+    putchar(RIGHT_TOP_CORNER);
     for(int i = 0; i < 3; i++) {
         POSCursor(KEYBOARD_X, KEYBOARD_Y + 1 + i * 2);
         putchar(VER_BAR);
@@ -207,10 +207,10 @@ char keyboard(bool shift, int irX, int irY) {
     }
     putchar(RIGHT_MIDDLE_LINK);
     POSCursor(KEYBOARD_X, KEYBOARD_Y + 9);
-    if (irX > KEYBOARD_X && irX < KEYBOARD_X + 31 && irY > 20 && irY < 24) {
+    if (irX > KEYBOARD_X && irX < KEYBOARD_X + 31 && irY > 19 && irY < 23) {
         printf("%c             %sSpace%s             %c Backspace %c", VER_BAR, WHITE_BG_BLACK_FG, DEFAULT_BG_FG, VER_BAR, VER_BAR);
         currChar = ' ';
-    } else if ((irX > KEYBOARD_X + 31 && irX < KEYBOARD_X + 42 && irY > 20 && irY < 24)) {
+    } else if ((irX > KEYBOARD_X + 31 && irX < KEYBOARD_X + 42 && irY > 19 && irY < 23)) {
         printf("%c             Space             %c %sBackspace%s %c", VER_BAR, VER_BAR, WHITE_BG_BLACK_FG, DEFAULT_BG_FG, VER_BAR);
         currChar = '\b';
     } else {

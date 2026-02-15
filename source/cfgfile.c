@@ -7,6 +7,7 @@
 #include "Input.h"
 #include "virtualkb.h"
 #include "TUI.h"
+#include <unistd.h>
 
 char *decodeencryption(char byte) {
     switch (byte) {
@@ -249,7 +250,7 @@ void editdns_ip(int PROFNumber, connection_t *profile, bool dns_ip) {
         if(dns_ip) {
             printf("IP Address : %d.%d.%d.%d\n", profile->ip[0], profile->ip[1], profile->ip[2], profile->ip[3]);
         } else {
-            printf("Primary DNS :  %d.%d.%d.%d\n", profile->dns1[0], profile->dns1[1], profile->dns1[2], profile->dns1[3]);
+            printf("Primary DNS : %d.%d.%d.%d\n", profile->dns1[0], profile->dns1[1], profile->dns1[2], profile->dns1[3]);
         }
         
         POSCursor(20, 10);
@@ -547,9 +548,10 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
     WD_ScanOnce(&set, ScanBuff, sizeof(ScanBuff));
     u16 APs = ScanBuff[0] << 8 | ScanBuff[1];
 
-    POSCursor(0, 25);
+    POSCursor(0, 24);
     printf(" B : Go back");
     printf("\n A : Select AP");
+    printf("\n 2 : Scan Again");
 
     int AP = 0;
     BSSDescriptor* ptr = ParseScanBuff(ScanBuff, X, Y, AP);
@@ -584,9 +586,10 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                 APs = ScanBuff[0] << 8 | ScanBuff[1];
                 AP = 0;
                 ptr = ParseScanBuff(ScanBuff, X, Y, AP);
-                POSCursor(0, 25);
+                POSCursor(0, 24);
                 printf(" B : Go back");
                 printf("\n A : Select AP");
+                printf("\n 2 : Scan Again");
             break;
 
             case b_A:
@@ -607,7 +610,7 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                     u8 keylen = 0;
                     bool brk = 0;
                     while(!brk) {
-                        POSCursor((X/2) + 1, 8);
+                        POSCursor((X/2) - 13, 9);
                         printf("-> ");
                         ReadString(keybuff, &keylen, 64);
                         if(Security & WD_WPA2_AES) {
