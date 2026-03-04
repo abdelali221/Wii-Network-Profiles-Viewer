@@ -5,7 +5,7 @@ Check your Wii's Network Profiles details!
 
 # How to use :
 
-A dedicated guide will be available at https://abdelali221.github.io/guides/WNPV.html .
+A dedicated guide is available at https://abdelali221.github.io/guides/WNPV.html .
 
 # Credits :
 
