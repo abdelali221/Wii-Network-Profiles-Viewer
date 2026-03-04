@@ -9,7 +9,7 @@ A dedicated guide is available at https://abdelali221.github.io/guides/WNPV.html
 
 # Credits :
 
-- Myself for creating this wonderful tool as well as the WD implementation of libogc.
+- Myself for creating this wonderful tool and [LibWD](https://github.com/abdelali221/LibWD).
 - Any person who played a role (small or big) in the Wii Community, thank you all.
 
 Software brought to you by Abdelali221
