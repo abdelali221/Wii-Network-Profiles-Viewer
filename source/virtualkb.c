@@ -97,6 +97,20 @@ void ClearKeyboard() {
     }
 }
 
+bool keyboard_isIRinrange(int irX, int irY) {
+    if ((irX > KEYBOARD_X && irX < (KEYBOARD_X + (4 * 5))) && (irY > KEYBOARD_Y && irY < (KEYBOARD_Y + (2 * 12)))) {
+        return true;
+    }
+    return false;
+}
+
+bool numpad_isIRinrange(int irX, int irY) {
+    if ((irX > NUMPAD_X && irX < NUMPAD_X + (4 * 3)) && (irY > (NUMPAD_Y - 2) && irY < ((NUMPAD_Y - 2) + (2 * 4)))) {
+        return true;
+    }
+    return false;
+}
+
 char numpad(int irX, int irY) {
     char currChar = '\0';
     for(int i = 0; i < 5; i++) {
@@ -207,7 +221,7 @@ char keyboard(bool shift, int irX, int irY) {
     }
     putchar(RIGHT_MIDDLE_LINK);
     POSCursor(KEYBOARD_X, KEYBOARD_Y + 9);
-    if (irX > KEYBOARD_X && irX < KEYBOARD_X + 31 && irY > 19 && irY < 23) {
+    if (irX > KEYBOARD_X - 2 && irX < KEYBOARD_X + 31 && irY > 19 && irY < 23) {
         printf("%c             %sSpace%s             %c Backspace %c", VER_BAR, WHITE_BG_BLACK_FG, DEFAULT_BG_FG, VER_BAR, VER_BAR);
         currChar = ' ';
     } else if ((irX > KEYBOARD_X + 31 && irX < KEYBOARD_X + 42 && irY > 19 && irY < 23)) {
@@ -249,7 +263,7 @@ char keyboard(bool shift, int irX, int irY) {
     }
     POSCursor(KEYBOARD_X, KEYBOARD_Y + 11);
     printf("B : Shift");
-    if (currChar == '\0') printf(" / Please aim at the keyboard with your WiiMote");
+    if (currChar == '\0') printf(" / Aim at the screen or use the D-PAD");
     else printf("%*c", 48, ' ');
     return currChar;
 }

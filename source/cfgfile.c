@@ -1,13 +1,15 @@
+#include <fat.h>
+#include <ogc/wd.h>
+#include <math.h>
+#include <unistd.h>
+
 #include "cfgfile.h"
 #include "WiiLibs.h"
 #include "Video.h"
-#include <fat.h>
-#include <math.h>
-#include <ogc/wd.h>
 #include "Input.h"
+#include "ncd.h"
 #include "virtualkb.h"
 #include "TUI.h"
-#include <unistd.h>
 
 char *decodeencryption(char byte) {
     switch (byte) {
@@ -112,9 +114,9 @@ void printprofiledetails(int PROFNumber, connection_t *profile) {
     }
 
     POSCursor(0, 25);
-    printf(" 1 : Dump config.dat\n");
-    printf(" 2 : Edit current profile\n");
-    printf(" PLUS : Test connectivity of the current configuration");
+    printf(" 1 (X) : Dump config.dat\n");
+    printf(" 2 (Y) : Edit current profile\n");
+    printf(" PLUS (L) : Test connectivity of the current configuration");
 }
 
 void editproxy(int PROFNumber, connection_t *profile) {
@@ -144,7 +146,7 @@ void editproxy(int PROFNumber, connection_t *profile) {
 
         POSCursor(0, 25);
         printf("A : Edit\n");
-        printf("HOME : Go back\n");
+        printf("HOME (Start) : Go back\n");
         
         POSCursor(18, 4 + (Selection * 2));
         printf("->");
@@ -153,7 +155,7 @@ void editproxy(int PROFNumber, connection_t *profile) {
         u8 idx = 0;
 
         while (brk) {
-            int Input = CheckWPAD(0);
+            int Input = CheckInput(0);
 
             switch (Input) {
 
@@ -267,14 +269,14 @@ void editdns_ip(int PROFNumber, connection_t *profile, bool dns_ip) {
 
         POSCursor(0, 25);
         printf("A : Edit\n");
-        printf("HOME : Go back\n");
+        printf("HOME (Start) : Go back\n");
 
         POSCursor(18, 8 + (Selection * 2));
         printf("->");
         bool brk = true;
         
         while (brk) {
-            int Input = CheckWPAD(0);
+            int Input = CheckInput(0);
             switch (Input) {
 
                 case HOME:
@@ -361,7 +363,7 @@ void editwireless(int PROFNumber, connection_t *profile) {
 
         POSCursor(0, 25);
         printf("A : Edit\n");
-        printf("HOME : Go back\n");
+        printf("HOME (Start) : Go back\n");
 
         POSCursor(18, 8 + (Selection * 2));
         printf("->");
@@ -369,7 +371,7 @@ void editwireless(int PROFNumber, connection_t *profile) {
         bool brk = true;
 
         while (brk) {
-            int Input = CheckWPAD(0);
+            int Input = CheckInput(0);
 
             switch (Input) {
 
@@ -421,7 +423,7 @@ void editwireless(int PROFNumber, connection_t *profile) {
                         }
                         POSCursor(0, 25);
                         printf("A : Edit\n");
-                        printf("HOME : Go back\n");               
+                        printf("HOME (Start) : Go back\n");               
                     } else {
                         profile->encryption++;
                         if (profile->encryption  == 3) profile->encryption = 4;
@@ -551,13 +553,13 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
     POSCursor(0, 24);
     printf(" B : Go back");
     printf("\n A : Select AP");
-    printf("\n 2 : Scan Again");
+    printf("\n 2 (Y) : Scan Again");
 
     int AP = 0;
     BSSDescriptor* ptr = ParseScanBuff(ScanBuff, X, Y, AP);
 
     while (1) {
-        int Input = CheckWPAD(0);
+        int Input = CheckInput(0);
         switch(Input) {
             case UP:
                 if(AP > 0) {
@@ -589,7 +591,7 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                 POSCursor(0, 24);
                 printf(" B : Go back");
                 printf("\n A : Select AP");
-                printf("\n 2 : Scan Again");
+                printf("\n 2 (Y) : Scan Again");
             break;
 
             case b_A:
@@ -662,6 +664,7 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                     profile->ssid_length = ptr->SSIDLength;
                     profile->encryption = WD_OPEN;
                 }
+                profile->mtu = 1500;
                 return;
             break;
 
@@ -672,7 +675,9 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
     }
 }
 
-void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
+void editprofile(int PROFNumber, netconfig_t* origbuff) {
+    netconfig_t aligned buff;
+    memcpy(&buff, origbuff, sizeof(netconfig_t));
     ClearScreen();
     int Selection = 0;
     bool stayinloop = true;
@@ -724,11 +729,11 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
         }
         
         printf(" B : Go back without saving\n");
-        printf(" PLUS : Go to submenu (Cursor needs to be : +>)\n");
-        printf(" MINUS : Clear Profile\n");
-        printf(" 1 : Save and go back");
+        printf(" PLUS (L) : Go to submenu (Cursor needs to be : +>)\n");
+        printf(" MINUS (R) : Clear Profile\n");
+        printf(" 1 (X) : Save and go back");
         if(!(buff.connection[PROFNumber - 1].flags & INTERFACE)) {
-            printf("\n 2 : Scan for AP");
+            printf("\n 2 (Y) : Scan for AP");
         }
 
         int offset = 0;
@@ -765,7 +770,7 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
         
         bool brk = true;
         while (brk) {
-            int Input = CheckWPAD(0);
+            int Input = CheckInput(0);
 
             switch (Input) {
                 case DOWN:
@@ -849,33 +854,33 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
                         switch (PROFNumber)
                         {
                             case 1:
-                                if(buff.connection[2].flags & 0x80) {
+                                if(buff.connection[2].flags & CONNECTION_SELECTED) {
                                     buff.connection[2].flags -= 0x80;
                                     printf("Connection 3 was active; Disabling it\n");
                                 }
-                                if(buff.connection[1].flags & 0x80) {
+                                if(buff.connection[1].flags & CONNECTION_SELECTED) {
                                     buff.connection[1].flags -= 0x80;
                                     printf("Connection 2 was active; Disabling it\n");
                                 }
                             break;
 
                             case 2:
-                                if(buff.connection[2].flags & 0x80) {
+                                if(buff.connection[2].flags & CONNECTION_SELECTED) {
                                     buff.connection[2].flags -= 0x80;
                                     printf("Connection 3 was active; Disabling it\n");
                                 }
-                                if(buff.connection[0].flags & 0x80) {
+                                if(buff.connection[0].flags & CONNECTION_SELECTED) {
                                     buff.connection[0].flags -= 0x80;
                                     printf("Connection 1 was active; Disabling it\n");
                                 }
                             break;
 
                             case 3:
-                                if(buff.connection[1].flags & 0x80) {
+                                if(buff.connection[1].flags & CONNECTION_SELECTED) {
                                     buff.connection[1].flags -= 0x80;
                                     printf("Connection 2 was active; Disabling it\n");
                                 }
-                                if(buff.connection[0].flags & 0x80) {
+                                if(buff.connection[0].flags & CONNECTION_SELECTED) {
                                     buff.connection[0].flags -= 0x80;
                                     printf("Connection 1 was active; Disabling it\n");
                                 }
@@ -883,18 +888,24 @@ void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath) {
                         
                         }
                     }
-                    for (size_t i = 0; i < 2; i++)
+                    buff.header4 = 0;
+                    for (size_t i = 0; i < 3; i++)
                     {
-                        if (buff.connection[i].flags & 0x20) buff.header4 = 1;
+                        if(buff.connection[i].flags & TEST_PASSED &&
+                           buff.connection[i].flags & CONNECTION_SELECTED)
+                           buff.header4 = 1;
                     }
-                    ISFS_Initialize();
-                    s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_RW);
-                    int ret = ISFS_Write(fcfg, &buff, sizeof(buff) - 1);
-                    if (ret == sizeof(buff) - 1) printf("Success!");
-                    else printf("Failed! %d", ret);
+                    int ret = NCD_WriteConfig(&buff);
+                    NCD_Status status = NCD_GetStatus();
+                    if (ret < 0 || status < 0) {
+                        printf("Failed! Error %d", status);
+                        sleep(3);
+                        brk = false;
+                        ClearScreen();
+                        break;
+                    }
+                    else printf("Success!");
                     sleep(2);
-                    ISFS_Close(fcfg);
-                    ISFS_Deinitialize();
                 case b_B:
                     ClearScreen();
                     return;

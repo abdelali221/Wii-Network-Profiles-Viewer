@@ -13,7 +13,7 @@
 #define MINUS 10
 #define HOME 11
 
-int CheckWPAD(int pad);
+int CheckInput(int pad);
 void InputInit();
 
 #endif

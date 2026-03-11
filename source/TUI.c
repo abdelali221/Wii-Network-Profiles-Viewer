@@ -30,12 +30,26 @@ void printtablebottom() {
 void ReadString(u8* dest, u8* len, u8 maxlen) {
     int idx = *len;
     bool shift = false;
-    int conX, conY;
+    bool use_dpad = false;
+    int conX = 0, conY = 0, x = 0, y = 0, irX, irY;
     while (1) {
-        int Input = CheckWPAD(0);
+        int Input = CheckInput(0);
         WPADData* data = WPAD_Data(0);
+        irX = ((data->ir.x) * 76) / 560;
+        irY = ((data->ir.y) * 28) / 420;
+
+        if(!use_dpad) {
+            x = irX;
+            y = irY;
+        }
         CON_GetPosition(&conX, &conY);
-        char chr = keyboard(shift, (((data->ir.x) * 76) / 560), (((data->ir.y) * 28) / 420));
+        char chr = keyboard(shift, x, y);
+
+        if(!keyboard_isIRinrange(irX, irY) && !use_dpad) {
+            x = KEYBOARD_X;
+            y = KEYBOARD_Y;
+        }
+
         POSCursor(conX, conY);
         VIDEO_WaitVSync();
 
@@ -72,8 +86,45 @@ void ReadString(u8* dest, u8* len, u8 maxlen) {
                 }
             break;
         
+            case UP:
+                if(!keyboard_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(y > (KEYBOARD_Y - 2)) y -= 2;
+                }
+            break;
+
+            case DOWN:
+                if(!keyboard_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if((y < (KEYBOARD_Y - 2) + 2 * 4 && (x < KEYBOARD_X + 11 * 4)) ||
+                       (y < (KEYBOARD_Y - 2) + 2 * 2 && (x == KEYBOARD_X + 11 * 4)) ) y += 2;
+                }
+            break;
+
+            case LEFT:
+                if(!keyboard_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(x > KEYBOARD_X && y < (KEYBOARD_Y - 2) + 2 * 4) x -= 4;
+                    else if ((x > KEYBOARD_X + 7 * 4) && (y == (KEYBOARD_Y - 2) + 2 * 4)) x = KEYBOARD_X + 6 * 4;
+                    else if ((x > KEYBOARD_X) && (y == (KEYBOARD_Y - 2) + 2 * 4)) x = KEYBOARD_X + 8 * 4;
+                }
+            break;
+
+            case RIGHT:
+                if(!keyboard_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if((((x < KEYBOARD_X + 11 * 4) && (y < (KEYBOARD_Y - 2) + 2 * 3))) ||
+                        ((x < KEYBOARD_X + 10 * 4) && (y < (KEYBOARD_Y - 2) + 2 * 4))) x += 4;
+                    else if ((x < KEYBOARD_X + 8 * 4) && (y == (KEYBOARD_Y - 2) + 2 * 4)) x = KEYBOARD_X + 8 * 4;
+                    else if ((x < KEYBOARD_X + 11 * 4) && (y == (KEYBOARD_Y - 2) + 2 * 4)) x = KEYBOARD_X + 6 * 4;
+                }                
+            break;
+        
             default:
             break;
+        }
+        if(keyboard_isIRinrange(irX, irY)) {
+            use_dpad = false;
         }
     }
 }
@@ -81,12 +132,27 @@ void ReadString(u8* dest, u8* len, u8 maxlen) {
 u32 ReadNumString(u32 maxval) {
     u32 val = 0;
     bool shift = false;
-    int conX, conY;
+    bool use_dpad = false;
+    int conX, conY, x = 0, y = 0, irX, irY;
     while (1) {
-        int Input = CheckWPAD(0);
+        int Input = CheckInput(0);
         WPADData* data = WPAD_Data(0);
+        irX = ((data->ir.x) * 76) / 560;
+        irY = ((data->ir.y) * 28) / 420;
+
+        if(!use_dpad) {
+            x = irX;
+            y = irY;
+        }
+
         CON_GetPosition(&conX, &conY);
-        char chr = numpad((((data->ir.x) * 76) / 560), (((data->ir.y) * 28) / 420));
+        char chr = numpad(x, y);
+
+        if(!numpad_isIRinrange(irX, irY) && !use_dpad) {
+            x = NUMPAD_X - 2;
+            y = NUMPAD_Y - 2;
+        }
+        
         POSCursor(conX, conY);
         VIDEO_WaitVSync();
 
@@ -123,9 +189,40 @@ u32 ReadNumString(u32 maxval) {
                     }
                 }
             break;
+
+            case UP:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(y > (NUMPAD_Y - 2)) y -= 2;
+                }
+            break;
+
+            case DOWN:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(y < (NUMPAD_Y - 2) + 2 * 3) y += 2;
+                }
+            break;
+
+            case LEFT:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(x > NUMPAD_X + 4) x -= 4;
+                }
+            break;
+
+            case RIGHT:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(x < NUMPAD_X + 4 * 2) x += 4;
+                }                
+            break;
         
             default:
             break;
+        }
+        if(numpad_isIRinrange(irX, irY)) {
+            use_dpad = false;
         }
     }
 }
@@ -134,12 +231,29 @@ void ReadDNS_IP(u8* dest) {
     u8 buff[4] = {0};
     u8 idx = 0;
     bool shift = false;
-    int conX, conY;
+    bool use_dpad = false;
+    int conX, conY, szX, szY, x = 0, y = 0, irX, irY;
+    CON_GetMetrics(&szX, &szY);
     while (1) {
-        int Input = CheckWPAD(0);
+        int Input = CheckInput(0);
         WPADData* data = WPAD_Data(0);
+        irX = ((data->ir.x) * szX) / 560;
+        irY = ((data->ir.y) * szY) / 420;
+
+        if(!use_dpad) {
+            x = irX;
+            y = irY;
+        }
+
         CON_GetPosition(&conX, &conY);
-        char chr = numpad((((data->ir.x) * 76) / 560), (((data->ir.y) * 28) / 420));
+        char chr = numpad(x, y);
+
+        if(!numpad_isIRinrange(irX, irY) && !use_dpad) {
+            x = NUMPAD_X - 2;
+            y = NUMPAD_Y - 2;
+        }
+
+
         POSCursor(conX, conY);
         VIDEO_WaitVSync();
 
@@ -176,7 +290,7 @@ void ReadDNS_IP(u8* dest) {
                         break;
 
                         default:
-                            if((buff[idx] * 10) + (chr - '0') < 255) {
+                            if((buff[idx] * 10) + (chr - '0') <= 255) {
                                 buff[idx] = (buff[idx] * 10) + chr - '0';
                             } else {
                                 idx++;
@@ -205,9 +319,41 @@ void ReadDNS_IP(u8* dest) {
                 printf("      ");
                 POSCursor(conX, conY);
             break;
+
+            case UP:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(y > (NUMPAD_Y - 2)) y -= 2;
+                }
+            break;
+
+            case DOWN:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(y < (NUMPAD_Y - 2) + 2 * 3) y += 2;
+                }
+            break;
+
+            case LEFT:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(x > NUMPAD_X + 4) x -= 4;
+                }
+            break;
+
+            case RIGHT:
+                if(!numpad_isIRinrange(irX, irY)) {
+                    use_dpad = true;
+                    if(x < NUMPAD_X + 4 * 2) x += 4;
+                }                
+            break;
         
             default:
             break;
+        }
+        
+        if(numpad_isIRinrange(irX, irY)) {
+            use_dpad = false;
         }
     }
 }

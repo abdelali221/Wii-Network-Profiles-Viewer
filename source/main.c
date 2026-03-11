@@ -1,33 +1,15 @@
-#include "Input.h"
-#include "Video.h"
-#include "WiiLibs.h"
-#include <ogc/machine/processor.h>
-#include "virtualkb.h"
-#include "cfgfile.h"
 #include <fat.h>
 #include <network.h>
+#include <ogc/machine/processor.h>
+#include <sys/errno.h>
 
-#define VER "1.5"
+#include "cfgfile.h"
+#include "Input.h"
+#include "ncd.h"
+#include "Video.h"
+#include "WiiLibs.h"
 
-static fstats filest aligned;
-
-u16 get_tmd_version(u64 title) {
-    STACK_ALIGN(u8, tmdbuf, 1024, 32);
-    u32 tmd_view_size = 0;
-    s32 res;
-
-    res = ES_GetTMDViewSize(title, &tmd_view_size);
-
-    if (res < 0) return 0;
-
-    if (tmd_view_size > 1024) return 0;
-
-    ES_GetTMDView(title, (tmd_view*)tmdbuf, tmd_view_size);
-
-    if (res < 0) return 0;
-
-    return (tmdbuf[88] << 8) | tmdbuf[89];
-}
+#define VER "1.5.1"
 
 int main() { 
     int PROFNumber = 1;
@@ -35,102 +17,61 @@ int main() {
     VideoInit();
     InputInit();
     printf("Wii Network Profiles Viewer %s\n Created By Abdelali221", VER);
-    POSCursor(20, 10);
-    printf("This software writes to the %sNAND!%s", RED_BG_WHITE_FG, DEFAULT_BG_FG);
-    POSCursor(23, 12);
+    POSCursor(21, 9);
+    printf("This software makes changes to your");
+    POSCursor(28, 10);
+    printf("%sSystem configuration!%s", RED_BG_WHITE_FG, DEFAULT_BG_FG);
+    POSCursor(26, 12);
     printf("Use it %sAT YOUR OWN RISK!%s", RED_BG_WHITE_FG, DEFAULT_BG_FG);
     POSCursor(16, 20);
-    printf(" Press anything but + if you want to exit...");
-    POSCursor(12, 24);
-    printf("Please check readme.md before using this software :");
-    POSCursor(15, 26);
+    printf(" Press anything but + (L) if you want to exit...");
+    POSCursor(14, 24);
+    printf("Please check our guide before using this software :");
+    POSCursor(16, 26);
     printf("https://abdelali221.github.io/guides/WNPV.html");
 
     int pressed;
     while (1)
     {
-        pressed = CheckWPAD(0);
+        pressed = CheckInput(0);
         if(pressed) break;
     }
     if(pressed != PLUS) {
         exit(0);
     }
 
-    ISFS_Initialize();
-
-    ClearScreen();
-
-    char cfgpath[64] = {0};
-
-    u16 SMVER = get_tmd_version(0x0000000100000002);
-
-    if (SMVER == 34 || SMVER == 33 || SMVER == 64) {
-        sprintf(cfgpath, SM1PATH);
-    } else {
-        sprintf(cfgpath, POSTSM1PATH);
-    }
-
-    printf("%s ", cfgpath);
-    
-    s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
-
-    int stat = ISFS_GetFileStats(fcfg, &filest);
-    if (fcfg >= 0 && stat == ISFS_OK) {
-        printf("size : %d\n", filest.file_length);
-    } else {
-        if (stat == -4) {
-            printf("NOT FOUND AT %s!\n", cfgpath);
-            if (!strcmp(cfgpath, SM1PATH)) {
-                sprintf(cfgpath, POSTSM1PATH);
-                fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
-            }
-            if (!strcmp(cfgpath, POSTSM1PATH) == 0) {
-                sprintf(cfgpath, SM1PATH);
-                fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
-            }
-            printf("%s ", cfgpath);
-        }
-        stat = ISFS_GetFileStats(fcfg, &filest);
-        if (fcfg >= 0 && stat == ISFS_OK) {
-            printf("size : %d\n", filest.file_length);
-        } else {
-            printf(" NOT FOUND!\nAborting...");
-            exit(0);
-        }
-    }
-
-    sleep(2);
-
     ClearScreen();
 
     netconfig_t aligned buff;
-    
-    int ret = ISFS_Read(fcfg, &buff, filest.file_length);
 
-    if (ret != filest.file_length) {
+    memset(&buff, 0, sizeof(netconfig_t));
+
+    printf("Reading Network configuration...");
+
+    int ret = NCD_ReadConfig(&buff);
+    
+    if (ret < 0) {
         printf("Failed! ret = %d", ret);
         exit(0);
     }
+    printf("Done.");
+    sleep(2);
+    ClearScreen();
 
     printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
-
-    ISFS_Close(fcfg);
-
-    ISFS_Deinitialize();
 
     bool inloop = true;
 
     while(inloop) {
-        int Input = CheckWPAD(0);
+        int Input = CheckInput(0);
 
         switch (Input) {
             case TWO:
-                editprofile(PROFNumber, buff, cfgpath);
-                ISFS_Initialize();
-                s32 fcfg = ISFS_Open(cfgpath, ISFS_OPEN_READ);
-                ISFS_Read(fcfg, &buff, filest.file_length);
-                ISFS_Close(fcfg);
-                ISFS_Deinitialize();
+                editprofile(PROFNumber, &buff);
+                ret = NCD_ReadConfig(&buff);
+                if(ret < 0) {
+                    printf("Failed reading the configuration! ret = %d", ret);
+                }
                 printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
             break;
 
@@ -139,7 +80,7 @@ int main() {
             break;
 
             case ONE:
-                dumpfile(&buff, sizeof(buff), "sd:/config.dat");
+                dumpfile(&buff, sizeof(buff), "/config.dat");
                 ClearScreen();
                 printprofiledetails(PROFNumber, &buff.connection[PROFNumber - 1]);
             break;
@@ -147,15 +88,38 @@ int main() {
             case PLUS:
                 ClearScreen();
                 WPAD_Shutdown();
-                printf("Reloading IOS...");
+                printf("Reloading IOS...\n\n");
                 IOS_ReloadIOS(IOS_GetVersion());
-                printf("Done.\n");
-                sleep(2);
-                printf("Initializing Network...");
-                if(!net_init()) {
-                    printf("Success!");
+                printf("Starting Network test :");
+                printf("\n\n This test only checks the connectivity between your Wii and your\n");
+                printf("router, it doesn't check whether or not it's connected to the Internet!\n\n");
+                printf("Initializing Network...\n");
+                NCD_SetIpConfig(&buff);
+                ret = -EBUSY;
+                u8 retries = 7;
+                while (retries > 0) {
+                    retries--;
+                    net_init_async(NULL, NULL);
+                    ret = net_get_status();
+                    while (ret == -EBUSY) {
+                        usleep(50 * 1000);
+                        ret = net_get_status();
+                    }
+                    if (ret != 0) {
+                        printf ("\nnet_init failed: %d, trying again...", ret);
+                        continue;
+                    } else {
+                        break;
+                    }            
+                }
+
+                if(!ret) {
+                    char ip[4];
+                    u32 _ip = net_gethostip();
+                    memcpy(ip, &_ip, 4);
+                    printf("\nSuccess! %d\n IP : %d.%d.%d.%d", ret, ip[0], ip[1], ip[2], ip[3]);
                 } else {
-                    printf("failed");
+                    printf("Failed! Error %d", ret);
                 }
                 net_deinit();
                 InputInit();

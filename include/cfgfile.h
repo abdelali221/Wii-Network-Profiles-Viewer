@@ -94,14 +94,10 @@ typedef struct _netconfig
 #define WPA2_PSK_AES 0x05
 #define WPA_PSK_AES 0x06
 
-#define SM1PATH "/shared2/sys/net/config.dat"
-
-#define POSTSM1PATH "/shared2/sys/net/02/config.dat"
-
 #define aligned __attribute__((aligned(32)))
 
 void dumpfile(netconfig_t *buff, size_t length, const char *path);
 void printprofiledetails(int PROFNumber, connection_t *profile);
-void editprofile(int PROFNumber, netconfig_t buff, const char *cfgpath);
+void editprofile(int PROFNumber, netconfig_t* buff);
 
 #endif
