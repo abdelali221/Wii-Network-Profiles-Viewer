@@ -9,7 +9,7 @@
 #include "Video.h"
 #include "WiiLibs.h"
 
-#define VER "1.5.1"
+#define VER "1.6"
 
 int main() { 
     int PROFNumber = 1;

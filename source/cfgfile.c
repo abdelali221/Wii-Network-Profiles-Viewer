@@ -1,5 +1,5 @@
 #include <fat.h>
-#include <ogc/wd.h>
+#include "wd.h"
 #include <math.h>
 #include <unistd.h>
 
@@ -79,7 +79,7 @@ void printprofiledetails(int PROFNumber, connection_t *profile) {
         printf("Internet test passed? %s\n", (profile->flags & TEST_PASSED) ? "Yes" : "No");
         printf("Use Proxy? %s\n", (profile->flags & USE_PROXY) ? "Yes" : "No");
         if (profile->flags & USE_PROXY) {
-            printf("  + Proxy Server : ");
+            printf("  + Proxy Server : %s", profile->proxy_settings.proxy_name);
             
             printf("\n  + Port : %d", profile->proxy_settings.proxy_port);
             
@@ -689,7 +689,7 @@ void editprofile(int PROFNumber, netconfig_t* origbuff) {
         printf("   Internet test passed? %s\n", (buff.connection[PROFNumber - 1].flags & TEST_PASSED) ? "Yes" : "No");
         printf("   Use Proxy? %s\n", (buff.connection[PROFNumber - 1].flags & USE_PROXY) ? "Yes" : "No");
         if (buff.connection[PROFNumber - 1].flags & USE_PROXY) {
-            printf("     + Proxy Server : ");
+            printf("     + Proxy Server : %s", buff.connection[PROFNumber - 1].proxy_settings.proxy_name);
             
             printf("\n     + Port : %d", buff.connection[PROFNumber - 1].proxy_settings.proxy_port);
             
@@ -885,7 +885,6 @@ void editprofile(int PROFNumber, netconfig_t* origbuff) {
                                     printf("Connection 1 was active; Disabling it\n");
                                 }
                             break;
-                        
                         }
                     }
                     buff.header4 = 0;

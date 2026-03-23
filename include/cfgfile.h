@@ -5,7 +5,7 @@
 
 // From Wiibrew.org With a few modifications
 
-typedef struct _proxy // 327 bytes
+typedef struct __attribute__((__packed__)) _proxy // 327 bytes
 {
     u8 use_proxy;               // 0x00 -> no proxy;  0x01 -> proxy
     u8 use_proxy_userandpass;    // 0x00 -> don't use username and password;  0x01 -> use username and password
@@ -18,7 +18,7 @@ typedef struct _proxy // 327 bytes
     u8 proxy_password[32];
 } proxy_t;
 
-typedef struct _connection // 2332 bytes
+typedef struct __attribute__((__packed__)) connection_t
 {
     u8 flags;           // Defined below.
     u8 padding_1[3];
@@ -31,36 +31,41 @@ typedef struct _connection // 2332 bytes
     u8 padding_2[2];
 
     u16 mtu;            //valid values are 0 and 576-1500 range
-    // 0x00 padding?
+    u8 padding_3[8];
 
     proxy_t proxy_settings;
     u8 padding_4;       //0x00
 
     proxy_t proxy_settings_copy;    // Seems to be a duplicate of proxy_settings
-    u8 padding_5[1302];             //0x00
+    u8 padding_5[1293];            //0x00
 
     /*
-     *  Wireless specific settings
+     * Wireless specific settings
      */
+
+    u16 rateset;
+    u8 padding_6[2];
+
     u8 ssid[32];        // Access Point name.
 
-    u8 padding_6;       // 0x00
+    u8 padding_7;       // 0x00
     u8 ssid_length;     // length of ssid[] (AP name) in bytes.
-    u8 padding_7[2];    // 0x00
+    u8 padding_8[2];    // 0x00
 
-    u8 padding_8;       // 0x00
+    u8 padding_9;       // 0x00
     u8 encryption;      // (Probably) Encryption.  OPN: 0x00, WEP64: 0x01, WEP128: 0x02 WPA-PSK (TKIP): 0x04, WPA2-PSK (AES): 0x05, WPA-PSK (AES): 0x06
-    u8 padding_9[2];    // 0x00
+    u8 padding_10[2];    // 0x00
 
-    u8 padding_10;      // 0x00
+    u8 padding_11;      // 0x00
     u8 key_length;      // length of key[] (encryption key) in bytes.  0x00 for WEP64 and WEP128.
     u8 unknown;         // 0x00 or 0x01 toogled with a WPA-PSK (TKIP) and with a WEP entered with hex instead of ascii.
-    u8 padding_11;      // 0x00
+    u8 padding_12;      // 0x00
 
     u8 key[64];         // Encryption key.  For WEP, key is stored 4 times (20 bytes for WEP64 and 52 bytes for WEP128) then padded with 0x00.
 
-    u8 padding_12[235]; // 0x00
+    u8 padding_13[236]; // 0x00
 } connection_t;
+
 
 typedef struct _netconfig
 {

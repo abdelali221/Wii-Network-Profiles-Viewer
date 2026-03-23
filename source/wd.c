@@ -1,0 +1,473 @@
+/*-----------------------------------------------------------------------
+
+    wd.c -- Wireless Driver Implementation.
+    This file is part of https://github.com/abdelali221/libWD
+
+    Copyright : 
+        - (C) 2025 - 2026 Abdelali221
+        - (C) 2013? tueidj
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+-----------------------------------------------------------------------*/
+
+#if defined(HW_RVL)
+
+#include "wd.h"
+#include <ogc/ipc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <gccore.h>
+#include <string.h>
+#include <ogc/machine/processor.h>
+
+#define DEFAULT_CHANNEL_BITMAP 0xfffe
+
+extern void usleep(u32 t);
+
+s32 wd_fd = -1;
+
+u8 NCDcommonbuff[0x20] __attribute__((aligned(32)));
+
+s32 NCD_LockWirelessDriver() {
+    s32 NCD = IOS_Open("/dev/net/ncd/manage", 0);
+    
+    memset(NCDcommonbuff, 0, 0x20);
+    
+    ioctlv vector = {0};
+    vector.data = NCDcommonbuff;
+    vector.len = 0x20;
+
+    IOS_Ioctlv(NCD, 1, 0, 1, &vector);
+    
+    s32 lockid = 0;
+    memcpy(&lockid, NCDcommonbuff, 4);
+    
+    IOS_Close(NCD);
+    NCD = -1;
+    
+    return lockid;
+}
+
+u32 NCD_UnlockWirelessDriver(s32 lockid) {
+    s32 NCD = IOS_Open("/dev/net/ncd/manage", 0);
+    if (NCD < 0) return -1;
+    
+    u8 NCDresult[0x20] __attribute__((aligned(32)));
+    memcpy(NCDresult, &lockid, 4);
+    
+    ioctlv vectors[2] = {0};
+    vectors[1].data = NCDresult;
+    vectors[1].len = 4;
+    vectors[0].data = NCDcommonbuff;
+    vectors[0].len = 0x20;
+    
+    IOS_Ioctlv(NCD, 2, 1, 1, vectors);
+    
+    u32 ret;
+    memcpy(&ret, NCDresult, 4);
+    
+    IOS_Close(NCD);
+    
+    NCD = -1;
+    return ret;
+}
+
+void WD_SetDefaultScanParameters(ScanParameters* set) {
+    set->ChannelBitmap = DEFAULT_CHANNEL_BITMAP;
+    set->MaxChannelTime = 100;
+
+    memset(set->BSSID, 0xff, BSSID_LENGTH);
+ 
+    set->ScanType = 0;
+    set->SSIDLength = 0;
+    
+    memset(set->SSID, 0x00, SSID_LENGTH);
+    memset(set->SSIDMatchMask, 0xff, 6);
+}
+
+int WD_Init(u8 mode) {
+    if(wd_fd < 0) {
+        wd_fd = IOS_Open("/dev/net/wd/command", 0x10000 | mode);
+        if (wd_fd < 0) return WD_UINITIALIZED;
+    }
+    return wd_fd;
+}
+
+void WD_Deinit() {
+    if(wd_fd < 0) return;
+    
+    IOS_Close(wd_fd);
+    wd_fd = -1;
+}
+
+u8 WD_GetRadioLevel(BSSDescriptor* Bss) {
+    if ((u8)Bss->RSSI >= 0xc4)
+        return WD_SIGNAL_STRONG; // Strong
+
+    if ((u8)Bss->RSSI >= 0xb5)
+        return WD_SIGNAL_NORMAL; // Normal
+
+    if ((u8)Bss->RSSI >= 0xab)
+        return WD_SIGNAL_FAIR; // Fair
+    
+    return WD_SIGNAL_WEAK; // Weak
+}
+
+int WD_GetInfo(WDInfo* info) {
+    s32 lockid = NCD_LockWirelessDriver();
+    
+    if(WD_Init(AOSSAPScan) < 0) return WD_UINITIALIZED;
+    
+    u8 inf[sizeof(WDInfo)] __attribute__((aligned(32)));
+    
+    ioctlv vector;
+    vector.data = inf;
+    vector.len = sizeof(WDInfo);
+	
+    IOS_Ioctlv(wd_fd, IOCTLV_WD_GET_INFO, 0, 1, &vector);
+    memcpy(info, inf, sizeof(WDInfo));
+
+    WD_Deinit();
+    NCD_UnlockWirelessDriver(lockid);
+    
+    return WD_SUCCESS;
+}
+
+int WD_Scan(ScanParameters *settings, u8* buff, u16 buffsize) {
+    if(wd_fd < 0) return WD_UINITIALIZED;
+
+    u8 buf[buffsize + 2] __attribute__((aligned(32)));
+    u8 settingsbuf[0x4e] __attribute__((aligned(32)));
+    
+    memset(settingsbuf, 0, 0x4e);
+    memset(buf, 0, buffsize + 2);
+    memcpy(settingsbuf, settings, 0x1a);
+     
+    ioctlv vectors[2];
+    vectors[0].data = settingsbuf;
+    vectors[0].len = 0x4e;
+    vectors[1].data = buf;
+    vectors[1].len = buffsize;
+    
+    IOS_Ioctlv(wd_fd, IOCTLV_WD_SCAN, 1, 1, vectors);
+    usleep(100000);
+    memcpy(buff, buf, buffsize);
+	
+    return WD_SUCCESS;
+}
+
+int WD_ScanOnce(ScanParameters *settings, u8* buff, u16 buffsize) {
+    s32 lockid = NCD_LockWirelessDriver();
+    
+    if(WD_Init(AOSSAPScan) < 0) return WD_UINITIALIZED;
+    
+    WD_Scan(settings, buff, buffsize);
+    
+    WD_Deinit();
+    NCD_UnlockWirelessDriver(lockid);
+    
+    return WD_SUCCESS;
+}
+
+u8 WD_GetNumberOfIEs(BSSDescriptor* Bss) {
+    u8 ret = 0;
+
+    u8* ptr = (u8*)Bss;
+    IE_hdr* hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor)];
+    u16 offset = 0;
+
+    while(offset < Bss->IEs_length && hdr->len != 0 )
+    {
+        hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
+        offset += hdr->len + sizeof(IE_hdr);
+        ret++;
+    }
+
+    return ret;
+}
+
+int WD_GetIELength(BSSDescriptor* Bss, u8 ID) {
+    u16 IEslen = Bss->IEs_length;
+
+    u8* ptr = (u8*)Bss;
+    IE_hdr* hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor)];
+    u16 offset = 0;
+
+    while(hdr->ID != ID && (offset + hdr->len) < IEslen && hdr->len != 0)
+    {
+        hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
+        offset += hdr->len + sizeof(IE_hdr);
+    }
+
+    if(hdr->ID != ID) return WD_NOTFOUND;
+
+    return hdr->len;
+}
+
+int WD_GetIE(BSSDescriptor* Bss, u8 ID, u8* buff, u8 buffsize) {
+    if(!buff) return WD_INVALIDBUF;
+
+    u16 IEslen = Bss->IEs_length;
+
+    u8* ptr = (u8*)Bss;
+    IE_hdr* hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + 1];
+    u16 offset = 0;
+
+    while((offset + hdr->len) < IEslen)
+    {
+        hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
+        if(hdr->ID == ID) break;
+        offset += hdr->len + sizeof(IE_hdr);
+    }
+
+    if(hdr->ID != ID) return WD_NOTFOUND;
+    if(buffsize < WD_GetIELength(Bss, ID)) return WD_BUFFTOOSMALL;
+
+    memset(buff, 0, buffsize);
+    memcpy(buff, &ptr[offset + sizeof(BSSDescriptor) + sizeof(IE_hdr)], hdr->len);
+
+    return WD_SUCCESS;
+}
+
+int WD_GetIEIDList(BSSDescriptor* Bss, u8* buff, u8 buffsize) {
+    if(!buff) return WD_INVALIDBUF;
+    if(buffsize < WD_GetNumberOfIEs(Bss)) return WD_BUFFTOOSMALL;
+
+    u8 n = 0;
+
+    u8* ptr = (u8*)Bss;
+    IE_hdr* hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor)];
+    u16 offset = 0;
+
+    while(offset < Bss->IEs_length && hdr->len != 0)
+    {
+        buff[n] = hdr->ID;
+        hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
+        offset += hdr->len + sizeof(IE_hdr);
+        n++;
+    }
+
+    return WD_SUCCESS;
+}
+
+int WD_GetVendorSpecificIE(BSSDescriptor* Bss, u32 OUI, u8* buff, u8 buffsize) {
+    if(!buff) return WD_INVALIDBUF;
+    u16 IEslen = Bss->IEs_length;
+
+    u8* ptr = (u8*)Bss;
+    IE_hdr* hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor)];
+    u16 offset = 0;
+
+    u32 tgtOUI = 0;
+
+    while((offset + hdr->len) < IEslen && hdr->len != 0)
+    {
+        hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
+        tgtOUI = ptr[sizeof(BSSDescriptor) + offset + 2] << 24 |
+                 ptr[sizeof(BSSDescriptor) + offset + 3] << 16 |
+                 ptr[sizeof(BSSDescriptor) + offset + 4] << 8 |
+                 ptr[sizeof(BSSDescriptor) + offset + 5];
+        if (hdr->ID == IEID_VENDORSPECIFIC && tgtOUI == OUI) break;
+        offset += hdr->len + sizeof(IE_hdr);
+    }
+
+    if(hdr->ID != IEID_VENDORSPECIFIC ||
+        tgtOUI != OUI) return WD_NOTFOUND;
+    if(buffsize < hdr->len) return WD_BUFFTOOSMALL;
+
+    memset(buff, 0, buffsize);
+    memcpy(buff, &ptr[offset + sizeof(BSSDescriptor) + sizeof(IE_hdr)], hdr->len);
+
+    return WD_SUCCESS;
+}
+
+int WD_GetVendorSpecificIELength(BSSDescriptor* Bss, u32 OUI) {
+    u16 IEslen = Bss->IEs_length;
+
+    u8* ptr = (u8*)Bss;
+    IE_hdr* hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor)];
+    u16 offset = 0;
+
+    u32 tgtOUI = 0;
+
+    while((offset + hdr->len) < IEslen && hdr->len != 0)
+    {
+        hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
+        tgtOUI = ptr[sizeof(BSSDescriptor) + offset + 2] << 24 |
+                 ptr[sizeof(BSSDescriptor) + offset + 3] << 16 |
+                 ptr[sizeof(BSSDescriptor) + offset + 4] << 8 |
+                 ptr[sizeof(BSSDescriptor) + offset + 5];
+        if (hdr->ID == IEID_VENDORSPECIFIC && tgtOUI == OUI) break;
+        offset += hdr->len + sizeof(IE_hdr);
+    }
+
+    if(hdr->ID != IEID_VENDORSPECIFIC ||
+        tgtOUI != OUI) return WD_NOTFOUND;
+
+    return hdr->len;
+}
+
+int WD_GetPCSList(BSSDescriptor *Bss, u8* destbuff, u8 buffsize, u8 offset) {
+    if(!Bss) return WD_INVALIDBUF;
+    if(!destbuff) return WD_INVALIDBUF;
+
+    IE_RSN_WPA IE;
+
+    int ret = WD_GetRSN_WPAEssentials(Bss, &IE, offset);
+
+    if(ret < 0) return WD_INVALIDBUF;
+    if(IE.PCS_Count * 4 > buffsize) return WD_BUFFTOOSMALL;
+
+    u8 IE_len;
+    if(offset == RSN_OFFSET) {
+        IE_len = WD_GetIELength(Bss, IEID_SECURITY_RSN);
+    } else {
+        IE_len = WD_GetVendorSpecificIELength(Bss, OUI_WPA);
+    }
+    
+    
+    u8 buff[IE_len];
+    if(offset == RSN_OFFSET) {
+        WD_GetIE(Bss, IEID_SECURITY_RSN, buff, IE_len);
+    } else {
+        WD_GetVendorSpecificIE(Bss, OUI_WPA, buff, IE_len);
+    }
+    
+
+    memset(destbuff, 0, buffsize);
+    memcpy(destbuff, &buff[8 + offset], IE.PCS_Count * 4);
+
+    return WD_SUCCESS;
+}
+
+int WD_GetRSN_WPAEssentials(BSSDescriptor *Bss, IE_RSN_WPA *IE, u8 offset) {
+    if(!Bss) return WD_INVALIDBUF;
+    if(!IE) return WD_INVALIDBUF;
+
+    u8 IE_len;
+    if(offset == RSN_OFFSET) {
+        IE_len = WD_GetIELength(Bss, IEID_SECURITY_RSN);
+    } else {
+        IE_len = WD_GetVendorSpecificIELength(Bss, OUI_WPA);
+    }
+    if(IE_len < 0) return WD_NOTFOUND;
+
+    u8 buff[IE_len];
+
+    if(offset == RSN_OFFSET) {
+        WD_GetIE(Bss, IEID_SECURITY_RSN, buff, IE_len);
+    } else {
+        WD_GetVendorSpecificIE(Bss, OUI_WPA, buff, IE_len);
+    }
+
+    IE->Version = buff[0 + offset] | buff[1 + offset] << 8;
+    offset += 2;
+    IE->GDCS = buff[0 + offset] << 24 | buff[1 + offset] << 16 | buff[2 + offset] << 8 | buff[3 + offset];
+    offset += 4;
+    IE->PCS_Count = buff[0 + offset] | buff[1 + offset] << 8;
+    offset += 2 + IE->PCS_Count * 4;
+    IE->AKMS_Count = buff[0 + offset] | buff[1 + offset] << 8;
+    offset += 2 + IE->AKMS_Count * 4;
+
+    return WD_SUCCESS;
+}
+
+u8 WD_GetSecurity(BSSDescriptor *Bss) {
+    if(!Bss) return WD_INVALIDBUF;
+    if(!(Bss->Capabilities & CAPAB_SECURED_FLAG)) return WD_OPEN;
+
+    int ie_len = WD_GetVendorSpecificIELength(Bss, OUI_WPA);
+    u8 ret = 0;
+
+    if (ie_len != WD_NOTFOUND && ie_len > 0) { // WPA
+        IE_RSN_WPA IE;
+        WD_GetRSN_WPAEssentials(Bss, &IE, WPA_OFFSET);
+
+        u8 buff[IE.PCS_Count * 4];
+        WD_GetPCSList(Bss, buff, IE.PCS_Count * 4, WPA_OFFSET);
+
+        u8 offset = 0;
+
+        for (int i = 0; i < IE.PCS_Count; i++) {
+            if (buff[offset + 3] == 0x02) ret |= WD_WPA_TKIP;
+            else if (buff[offset + 3] == 0x04) ret |= WD_WPA_AES;
+            offset += 4;
+        }
+    }
+
+    ie_len = WD_GetIELength(Bss, IEID_SECURITY_RSN);
+
+    if(ie_len != WD_NOTFOUND && ie_len > 0) { // WPA2
+        IE_RSN_WPA IE;
+        WD_GetRSN_WPAEssentials(Bss, &IE, RSN_OFFSET);
+
+        u8 buff[IE.PCS_Count * 4];
+        WD_GetPCSList(Bss, buff, IE.PCS_Count * 4, RSN_OFFSET);
+        u8 offset = 0;
+        
+        for (int i = 0; i < IE.PCS_Count; i++) {
+            if (buff[offset + 3] == 0x02) ret |= WD_WPA2_TKIP;
+            if (buff[offset + 3] == 0x04) ret |= WD_WPA2_AES;
+            offset += 4;
+        }
+    }
+
+    if(!ret) return WD_WEP;
+    
+    return ret;
+}
+
+s32 WD_GetConfig(void *config, u64 flags)
+{
+	ioctlv vector[3];
+	s32 result;
+
+	if (config == NULL)
+		return WD_INVALIDBUF;
+
+    vector[0].data = config;
+    vector[0].len = 0x180;
+
+    vector[2].data = config;
+    vector[2].len = 0x180;
+
+    vector[1].data = &flags;
+    vector[1].len = 8;
+
+    result = IOS_Ioctlv(wd_fd, IOCTLV_WD_GET_CONFIG, 2, 1, vector);
+
+	return result;
+}
+
+s32 WD_SetConfig(void *config, u64 flags)
+{
+	ioctlv vector[3];
+	s32 result;
+
+	if (config == NULL)
+		return WD_INVALIDBUF;
+
+    vector[0].data = config;
+    vector[0].len = 0x180;
+
+    vector[1].data = &flags;
+    vector[1].len = 8;
+
+    result = IOS_Ioctlv(wd_fd, IOCTLV_WD_SET_CONFIG, 2, 0, vector);
+
+	return result;
+}
+
+#endif
