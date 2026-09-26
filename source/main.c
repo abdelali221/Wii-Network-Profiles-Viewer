@@ -9,13 +9,16 @@
 #include "Video.h"
 #include "WiiLibs.h"
 
-#define VER "1.6"
+#define VER "1.6.1"
 
 int main() { 
+    
     int PROFNumber = 1;
 
     VideoInit();
+    
     InputInit();
+    
     printf("Wii Network Profiles Viewer %s\n Created By Abdelali221", VER);
     POSCursor(21, 9);
     printf("This software makes changes to your");
@@ -29,15 +32,15 @@ int main() {
     printf("Please check our guide before using this software :");
     POSCursor(16, 26);
     printf("https://abdelali221.github.io/guides/WNPV.html");
-
-    int pressed;
+    
+    int pressed = 0;
     while (1)
     {
         pressed = CheckInput(0);
         if(pressed) break;
     }
     if(pressed != PLUS) {
-        exit(0);
+        return 0;
     }
 
     ClearScreen();
@@ -117,7 +120,7 @@ int main() {
                     char ip[4];
                     u32 _ip = net_gethostip();
                     memcpy(ip, &_ip, 4);
-                    printf("\nSuccess! %d\n IP : %d.%d.%d.%d", ret, ip[0], ip[1], ip[2], ip[3]);
+                    printf("\nSuccess!\n IP : %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
                 } else {
                     printf("Failed! Error %d", ret);
                 }
@@ -152,5 +155,6 @@ int main() {
                 
     ClearScreen();
     printf("Exiting...");
+    
     return 0;
 }
