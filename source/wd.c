@@ -162,7 +162,6 @@ int WD_Scan(ScanParameters *settings, u8* buff, u16 buffsize) {
     vectors[1].len = buffsize;
     
     IOS_Ioctlv(wd_fd, IOCTLV_WD_SCAN, 1, 1, vectors);
-    usleep(100000);
     memcpy(buff, buf, buffsize);
 	
     return WD_SUCCESS;
@@ -275,10 +274,7 @@ int WD_GetVendorSpecificIE(BSSDescriptor* Bss, u32 OUI, u8* buff, u8 buffsize) {
     while((offset + hdr->len) < IEslen && hdr->len != 0)
     {
         hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
-        tgtOUI = ptr[sizeof(BSSDescriptor) + offset + 2] << 24 |
-                 ptr[sizeof(BSSDescriptor) + offset + 3] << 16 |
-                 ptr[sizeof(BSSDescriptor) + offset + 4] << 8 |
-                 ptr[sizeof(BSSDescriptor) + offset + 5];
+        tgtOUI = *(u32*)&ptr[sizeof(BSSDescriptor) + offset + 2];
         if (hdr->ID == IEID_VENDORSPECIFIC && tgtOUI == OUI) break;
         offset += hdr->len + sizeof(IE_hdr);
     }
@@ -305,10 +301,7 @@ int WD_GetVendorSpecificIELength(BSSDescriptor* Bss, u32 OUI) {
     while((offset + hdr->len) < IEslen && hdr->len != 0)
     {
         hdr = (IE_hdr*)&ptr[sizeof(BSSDescriptor) + offset];
-        tgtOUI = ptr[sizeof(BSSDescriptor) + offset + 2] << 24 |
-                 ptr[sizeof(BSSDescriptor) + offset + 3] << 16 |
-                 ptr[sizeof(BSSDescriptor) + offset + 4] << 8 |
-                 ptr[sizeof(BSSDescriptor) + offset + 5];
+        tgtOUI = *(u32*)&ptr[sizeof(BSSDescriptor) + offset + 2];
         if (hdr->ID == IEID_VENDORSPECIFIC && tgtOUI == OUI) break;
         offset += hdr->len + sizeof(IE_hdr);
     }
