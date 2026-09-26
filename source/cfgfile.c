@@ -108,7 +108,36 @@ void printprofiledetails(int PROFNumber, connection_t *profile) {
         if (!(profile->flags & INTERFACE)) {
 
             printf("\nSSID : %s", profile->ssid);
-            printf("\nPASSKEY : %s", profile->key);
+            if(profile->encryption) {
+                if(profile->encryption & (WEP64 | WEP128)) {
+                    printf("\nPASSKEY : ");
+                    if(profile->encryption == WEP64) {
+                        if(profile->unknown) {
+                            for(int i = 0; i < 5; i++) {
+                                printf("%02X", profile->key[i]);
+                            }
+                            printf(" (HEX)");
+                        } else {
+                            for(int i = 0; i < 5; i++) {
+                                putchar(profile->key[i]);
+                            }
+                        }
+                    } else {
+                        if(profile->unknown) {
+                            for(int i = 0; i < 13; i++) {
+                                printf("%02X", profile->key[i]);
+                            }
+                            printf(" (HEX)");
+                        } else {
+                            for(int i = 0; i < 13; i++) {
+                                putchar(profile->key[i]);
+                            }
+                        }
+                    }
+                } else {
+                    printf("\nPASSKEY : %s", profile->key);
+                }
+            }
             printf("\nENCRYPTION : %s", decodeencryption(profile->encryption));
         }
     }
@@ -344,9 +373,45 @@ void editdns_ip(int PROFNumber, connection_t *profile, bool dns_ip) {
     }
 }
 
+bool isHexOnly(char* str, u8 size) {
+    for(int i = 0;i < size - 1;i++) {
+        if(!((str[i] >= '0' && str[i] <= '9') ||
+         (str[i] >= 'A' && str[i] <= 'F')))  {
+            return false;
+         }
+    }
+    return true;
+}
+
+u8 chartohex(char c) {
+    if(c >= '0' && c <= '9') return c - '0';
+    if(c >= 'A' && c <= 'F') return c - 'A' + 0xA;
+    return 0;
+}
+
+char hextochar(u8 v) {
+    if(v >= 0x0 && v <= 0x9) return v + '0';
+    if(v >= 0xA && v <= 0xF) return v + 'A' - 0xA;
+    return 0;
+}
+
+void ConvertASCIIStringToHex(u8* dest, char* src, u8 len) {
+    for(int j = 0; j < (len/2); j++) {
+        dest[j] = (chartohex(src[j*2]) << 4) | chartohex(src[(j*2) + 1]);
+    }
+}
+
+void ConvertHexToASCIISrting(char* dest, u8* src, u8 len) {
+    for(int j = 0; j < (len/2); j++) {
+        dest[j*2] = (hextochar(src[j] >> 4));
+        dest[j*2 + 1] = (hextochar(src[j] & 0xF));
+    }
+}
+
 void editwireless(int PROFNumber, connection_t *profile) {
     int Selection = 0;
     while (1) {
+printmenu:
         ClearScreen();
 
         POSCursor(30, 5);
@@ -356,7 +421,34 @@ void editwireless(int PROFNumber, connection_t *profile) {
         printf("SSID : %s", profile->ssid);
 
         POSCursor(20, 10);
-        printf("PASSKEY : %s", profile->key);
+        if(profile->encryption) {
+            if(profile->encryption == WEP64 || profile->encryption == WEP128) {
+                printf("PASSKEY : ");
+                if(profile->encryption == WEP64) {
+                    if(profile->unknown) {
+                        for(int i = 0; i < 5; i++) {
+                            printf("%02X", profile->key[i]);
+                        }
+                    } else {
+                        for(int i = 0; i < 5; i++) {
+                            putchar(profile->key[i]);
+                        }
+                    }
+                } else {
+                    if(profile->unknown) {
+                        for(int i = 0; i < 13; i++) {
+                            printf("%02X", profile->key[i]);
+                        }
+                    } else {
+                        for(int i = 0; i < 13; i++) {
+                            putchar(profile->key[i]);
+                        }
+                    }
+                }
+            } else {
+                printf("PASSKEY : %s", profile->key);
+            }
+        }
 
         POSCursor(20, 12);
         printf("ENCRYPTION : %s",decodeencryption(profile->encryption));
@@ -402,7 +494,7 @@ void editwireless(int PROFNumber, connection_t *profile) {
                 case b_A:
                     POSCursor(0, 25);
                     printf("\x1b[2K");
-                    int idx = 0;
+                    u8 idx = 0;
                     if (Selection < 2) {
                         switch (Selection) {
                             case 0:
@@ -416,25 +508,120 @@ void editwireless(int PROFNumber, connection_t *profile) {
                                     brk = false;
                                 } else {
                                     idx = profile->key_length;
+                                    u8* str = calloc(64, 1);
+                                    if (profile->encryption == WEP64) {
+                                        if(profile->unknown) {
+                                            idx = 10;
+                                            ConvertHexToASCIISrting((char*)str, profile->key, 10);
+                                        } else {
+                                            memcpy(str, profile->key, 5);
+                                            idx = 5;
+                                        }
+                                    } else if(profile->encryption == WEP128) {
+                                        if(profile->unknown) {
+                                            idx = 26;
+                                            ConvertHexToASCIISrting((char*)str, profile->key, 13);
+                                        } else {
+                                            memcpy(str, profile->key, 13);
+                                            idx = 13;
+                                        }
+                                    } else {
+                                        memcpy(str, profile->key, idx);
+                                    }
                                     POSCursor(30 + idx, 10);
-                                    ReadString(profile->key, &profile->key_length, 64);
+                                    ReadString(str, &idx, 64);
+                                    if(profile->encryption > 3) {
+                                        if(idx < 8) {
+                                            memset(profile->key, 0, 64);
+                                            memset(profile->key, '0', 8);
+                                            profile->key_length = 8;
+                                        } else {
+                                            memcpy(profile->key, str, 64);
+                                            profile->key_length = idx;
+                                        }
+                                    } else if (profile->encryption == WEP64) {
+                                        if(idx == 10 && isHexOnly((char*)str, 10)) {
+                                            ConvertASCIIStringToHex(profile->key, (char*)str, 10);
+                                            for(int i = 0; i < 3; i++) {
+                                                memcpy(profile->key + 5 + (i*5), profile->key, 5);
+                                            }
+                                            profile->unknown = 1;
+                                        } else if(idx == 5) {
+                                            profile->unknown = 0;
+                                            for(int i = 0; i < 4; i++) {
+                                                memcpy(profile->key+(i*5), str, 5);
+                                            }
+                                        } else {
+                                            profile->unknown = 0;
+                                            memset(profile->key, '0', 20);
+                                        }
+                                        profile->key_length = 0;
+                                    } else if(profile->encryption == WEP128) {
+                                        if(idx == 26 && isHexOnly((char*)str, 26)) {
+                                            ConvertASCIIStringToHex(profile->key, (char*)str, 26);
+                                            for(int i = 0; i < 3; i++) {
+                                                memcpy(profile->key + 13 + (i*13), profile->key, 13);
+                                            }
+                                            profile->unknown = 1;
+                                        } else if(idx == 13) {
+                                            profile->unknown = 0;
+                                            for(int i = 0; i < 4; i++) {
+                                                memcpy(profile->key+(i*13), str, 13);
+                                            }
+                                        } else {
+                                            profile->unknown = 0;
+                                            memset(profile->key, '0', 52);
+                                        }
+                                        profile->key_length = 0;
+                                    }
+                                    free(str);
                                 }
+                                goto printmenu;
                             break;
-                        }
-                        POSCursor(0, 25);
-                        printf("A : Edit\n");
-                        printf("HOME (Start) : Go back\n");               
+                        }           
                     } else {
                         profile->encryption++;
-                        if (profile->encryption  == 3) profile->encryption = 4;
-                        if (profile->encryption  == 7) profile->encryption = 0;
-                        for (size_t i = 0; i < profile->key_length; i++) {
-                            profile->key[i] = '\0';
+                        profile->unknown = 0;
+                        switch(profile->encryption) {
+                            case WEP64:
+                                memset(profile->key, '0', 20);
+                                profile->key_length = 0;
+                            break;
+
+                            case WEP128:
+                                memset(profile->key, '0', 52);
+                                profile->key_length = 0;
+                            break;
+
+                            case 3:
+                                profile->encryption = 4;
+                                memset(profile->key, 0, 64);
+                                memset(profile->key, '0', 8);
+                                profile->key_length = 8;
+                            break;
+
+                            case WPA_PSK_TKIP:
+                                profile->unknown = 1;
+                            break;
+
+                            case WPA2_PSK_AES:
+                                profile->unknown = 0;
+                            break;
+
+                            case 7:
+                                profile->encryption = 0;
+                                memset(profile->key, 0, 64);
+                                profile->key_length = 0;
+                            break;
+                            
+                            default:
+                            break;
                         }
-                        profile->key_length = '\0';
                         brk = false;
                     }
-                
+                POSCursor(0, 25);
+                printf("A : Edit\n");
+                printf("HOME (Start) : Go back\n");
                 break;
             }
         }
@@ -529,22 +716,22 @@ BSSDescriptor* ParseScanBuff(u8 *ScanBuff, u8 X, u8 Y, u8 AP) {
 }
 
 void ScanWiFi(int PROFNumber, connection_t *profile) {
-    ScanParameters set;
-    WD_SetDefaultScanParameters(&set);
-
-    WDInfo inf;
-    WD_GetInfo(&inf);
-
-    set.ChannelBitmap = inf.EnableChannelsMask;
-
     ClearScreen();
     int X = 0, Y = 0;
     CON_GetMetrics(&X, &Y);
     POSCursor((X/2) - 8, 2);
     printf("WiFi Scan Wizard");
 
+    ScanParameters set;
+    WD_SetDefaultScanParameters(&set);
+
+    WDInfo inf;
+    WD_GetInfo(&inf);
+
     POSCursor((X/2) - 16, 7);
     printf("Scanning for WiFi networks nearby...");
+    
+    set.ChannelBitmap = inf.EnableChannelsMask;
 
     u8 ScanBuff[4096];
     WD_ScanOnce(&set, ScanBuff, sizeof(ScanBuff));
@@ -552,7 +739,7 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
 
     POSCursor(0, 24);
     printf(" B : Go back");
-    printf("\n A : Select AP");
+    if(APs > 0) printf("\n A : Select AP");
     printf("\n 2 (Y) : Scan Again");
 
     int AP = 0;
@@ -565,12 +752,18 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                 if(AP > 0) {
                     AP--;
                     ptr = ParseScanBuff(ScanBuff, X, Y, AP);
+                } else {
+                    AP = APs - 1;
+                    ptr = ParseScanBuff(ScanBuff, X, Y, AP);
                 }
             break;
 
             case DOWN:
                 if(AP < APs - 1) {
                     AP++;
+                    ptr = ParseScanBuff(ScanBuff, X, Y, AP);
+                } else {
+                    AP = 0;
                     ptr = ParseScanBuff(ScanBuff, X, Y, AP);
                 }
             break;
@@ -590,37 +783,41 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                 ptr = ParseScanBuff(ScanBuff, X, Y, AP);
                 POSCursor(0, 24);
                 printf(" B : Go back");
-                printf("\n A : Select AP");
+                if(APs > 0) printf("\n A : Select AP");
                 printf("\n 2 (Y) : Scan Again");
             break;
 
             case b_A:
                 u8 Security = WD_GetSecurity(ptr);
 
-                if(Security & WD_WPA2_AES || Security & WD_WPA_AES || Security & WD_WPA_TKIP || Security & WD_WEP) {
+                if(Security != WD_OPEN && APs) {
                     ClearScreen();
                     POSCursor((X/2) - 8, 2);
                     printf("WiFi Scan Wizard");
 
                     POSCursor(0, 26);
-                    printf(" Home : Save");
+                    printf(" Home : Save | 1 : Cancel");
 
                     POSCursor((X/2) - 15, 7);
                     printf("Please enter the password : ");
                     u8 keybuff[64];
                     memset(keybuff, 0, 64);
-                    u8 keylen = 0;
+                    u8 keylen;
                     bool brk = 0;
                     while(!brk) {
                         POSCursor((X/2) - 13, 9);
-                        printf("-> ");
-                        ReadString(keybuff, &keylen, 64);
+                        printf("-> %*c", 32, ' ');
+                        POSCursor((X/2) - 10, 9);
+                        keylen = 0;
+                        int ret = ReadString(keybuff, &keylen, 64);
+                        if(ret) return;
                         if(Security & WD_WPA2_AES) {
                             if(keylen < 8) {
                                 POSCursor((X/2) - 9, 11);
                                 printf(" Password is invalid!");
                             } else {
                                 profile->encryption = WPA2_PSK_AES;
+                                profile->unknown = 0;
                                 brk = 1;
                             }
                         } else if (Security & WD_WPA_AES) {
@@ -629,6 +826,7 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                                 printf(" Password is invalid!");
                             } else {
                                 profile->encryption = WPA_PSK_AES;
+                                profile->unknown = 0;
                                 brk = 1;
                             }
                         } else if (Security & WD_WPA_TKIP) {
@@ -637,14 +835,25 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                                 printf(" Password is invalid!");
                             } else {
                                 profile->encryption = WPA_PSK_TKIP;
+                                profile->unknown = 1;
                                 brk = 1;
                             }
                         } else if (Security & WD_WEP) {
-                            if(profile->key_length == 5) {
+                            if(keylen == 5) {
                                 profile->encryption = WEP64;
+                                profile->unknown = 0;
                                 brk = 1;
-                            } else if(profile->key_length == 13) {
+                            } else if(keylen == 13) {
                                 profile->encryption = WEP128;
+                                profile->unknown = 0;
+                                brk = 1;
+                            } else if(keylen == 10 && isHexOnly((char*)keybuff, 10)) {
+                                profile->encryption = WEP64;
+                                profile->unknown = 1;
+                                brk = 1;
+                            } else if(keylen == 26 && isHexOnly((char*)keybuff, 26)) {
+                                profile->encryption = WEP128;
+                                profile->unknown = 1;
                                 brk = 1;
                             } else {
                                 POSCursor((X/2) - 9, 11);
@@ -652,20 +861,34 @@ void ScanWiFi(int PROFNumber, connection_t *profile) {
                             }
                         }
                         sleep(1);
+                        POSCursor((X/2) - 9, 11);
+                        printf("%*c", 21, ' ');
+                        POSCursor(0, 26);
+                        printf(" Home : Save | 1 : Cancel");
                     }
                     strcpy((char*)profile->ssid, (char*)ptr->SSID);
                     profile->ssid_length = ptr->SSIDLength;
                     memset(profile->key, 0, 64);
-                    strcpy((char*)profile->key,(char*)keybuff);
-                    profile->key_length = keylen;
-                } else if(Security == 0) {
+                    if(Security & WD_WEP) {
+                        if(profile->unknown) {
+                            ConvertASCIIStringToHex(profile->key, (char*)keybuff, keylen);
+                        } else {
+                            for(int i = 0; i < 4; i++) {
+                                strncpy((char*)profile->key + (keylen*i),(char*)keybuff, keylen);
+                            }
+                        }                   
+                    } else {
+                        profile->key_length = keylen;
+                        strcpy((char*)profile->key,(char*)keybuff);
+                    }
+                    return;
+                } else if(Security == 0 && APs) {
                     strcpy((char*)profile->ssid, (char*)ptr->SSID);
                     memset(profile->key, 0, 64);
                     profile->ssid_length = ptr->SSIDLength;
                     profile->encryption = WD_OPEN;
+                    return;
                 }
-                profile->mtu = 1500;
-                return;
             break;
 
             case b_B:
@@ -718,7 +941,37 @@ void editprofile(int PROFNumber, netconfig_t* origbuff) {
         if (!(buff.connection[PROFNumber - 1].flags & INTERFACE)) {
 
             printf("\n   SSID : %s", buff.connection[PROFNumber - 1].ssid);
-            printf("\n   PASSKEY : %s", buff.connection[PROFNumber - 1].key);
+            if(buff.connection[PROFNumber - 1].encryption) {
+                if(buff.connection[PROFNumber - 1].encryption == WEP64 ||
+                    buff.connection[PROFNumber - 1].encryption == WEP128) {
+                    printf("\n   PASSKEY : ");
+                    if(buff.connection[PROFNumber - 1].encryption == WEP64) {
+                        if(buff.connection[PROFNumber - 1].unknown) {
+                            for(int i = 0; i < 5; i++) {
+                                printf("%02X", buff.connection[PROFNumber - 1].key[i]);
+                            }
+                            printf(" (HEX)");
+                        } else {
+                            for(int i = 0; i < 5; i++) {
+                                putchar(buff.connection[PROFNumber - 1].key[i]);
+                            }
+                        }
+                    } else {
+                        if(buff.connection[PROFNumber - 1].unknown) {
+                            for(int i = 0; i < 13; i++) {
+                                printf("%02X", buff.connection[PROFNumber - 1].key[i]);
+                            }
+                            printf(" (HEX)");
+                        } else {
+                            for(int i = 0; i < 13; i++) {
+                                putchar(buff.connection[PROFNumber - 1].key[i]);
+                            }
+                        }
+                    }
+                } else {
+                    printf("\n   PASSKEY : %s", buff.connection[PROFNumber - 1].key);
+                }
+            }
             printf("\n   ENCRYPTION : %s", decodeencryption(buff.connection[PROFNumber - 1].encryption));
         }
 
@@ -777,12 +1030,18 @@ void editprofile(int PROFNumber, netconfig_t* origbuff) {
                     if(Selection < 7 + (1 - (buff.connection[PROFNumber - 1].flags & INTERFACE))) {
                         Selection++;
                         brk = false;
+                    } else {
+                        Selection = 0;
+                        brk = false;
                     }
                 break;
 
                 case UP:
                     if (Selection > 0) {
                         Selection--;
+                        brk = false;
+                    } else {
+                        Selection = 7 + (1 - (buff.connection[PROFNumber - 1].flags & INTERFACE));
                         brk = false;
                     }
                 break;
