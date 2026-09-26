@@ -27,7 +27,7 @@ void printtablebottom() {
     putchar(188);
 }
 
-void ReadString(u8* dest, u8* len, u8 maxlen) {
+int ReadString(u8* dest, u8* len, u8 maxlen) {
     int idx = *len;
     bool shift = false;
     bool use_dpad = false;
@@ -62,7 +62,7 @@ void ReadString(u8* dest, u8* len, u8 maxlen) {
             case HOME:
                 *len = idx;
                 ClearKeyboard();
-                return;
+                return 0;
             break;
 
             case b_A:
@@ -118,6 +118,11 @@ void ReadString(u8* dest, u8* len, u8 maxlen) {
                     else if ((x < KEYBOARD_X + 8 * 4) && (y == (KEYBOARD_Y - 2) + 2 * 4)) x = KEYBOARD_X + 8 * 4;
                     else if ((x < KEYBOARD_X + 11 * 4) && (y == (KEYBOARD_Y - 2) + 2 * 4)) x = KEYBOARD_X + 6 * 4;
                 }                
+            break;
+
+            case ONE:
+                ClearKeyboard();
+                return 1;
             break;
         
             default:
